@@ -21,10 +21,10 @@ var SHELL = [
 /* Best-effort. Keep in sync with PLANS[] in index.html.
    A missing file is skipped rather than failing the install. */
 var PLANS = [
-  './plans/l01.jpg','./plans/l02.jpg','./plans/l03.jpg','./plans/l04.jpg',
-  './plans/l05.jpg','./plans/l06.jpg','./plans/l07.jpg','./plans/l08.jpg',
-  './plans/l09.jpg','./plans/l10.jpg','./plans/l11.jpg','./plans/l12.jpg',
-  './plans/l13.jpg'
+  './plans/101.jpg', './plans/102.jpg', './plans/103.jpg', './plans/103a.jpg',
+  './plans/104.jpg', './plans/105.jpg', './plans/106.jpg', './plans/107.jpg',
+  './plans/108.jpg', './plans/109.jpg', './plans/110.jpg', './plans/111.jpg',
+  './plans/112.jpg', './plans/113.jpg', './plans/114.jpg'
 ];
 
 self.addEventListener('install', function(e){
