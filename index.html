@@ -1,4 +1,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#14202b">
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
 
@@ -31,12 +33,12 @@
 
   .hdr{padding:14px 18px;border-bottom:2px solid var(--ink);display:grid;grid-template-columns:1fr 132px;gap:10px}
   label.lbl{display:block;font-size:9px;letter-spacing:.16em;text-transform:uppercase;color:var(--dim);margin-bottom:4px;font-weight:600}
-  .svr input,.svr textarea{
+  .svr input,.svr textarea,.svr select{
     width:100%;font-family:'Archivo',sans-serif;font-size:15px;color:var(--ink);
     background:#fff;border:1px solid var(--line);border-radius:2px;padding:9px 10px;
   }
   .svr textarea{resize:vertical;min-height:74px;line-height:1.4}
-  .svr input:focus,.svr textarea:focus{outline:2px solid var(--mark);outline-offset:0;border-color:var(--mark)}
+  .svr input:focus,.svr textarea:focus,.svr select:focus{outline:2px solid var(--mark);outline-offset:0;border-color:var(--mark)}
 
   .btn{display:block;width:100%;border:0;border-radius:2px;padding:15px;
     font-family:'Archivo',sans-serif;font-size:13.5px;font-weight:700;letter-spacing:.09em;
@@ -57,11 +59,13 @@
   .zoneband{background:var(--ink);color:var(--mark);padding:6px 18px;
     font-size:9.5px;letter-spacing:.2em;text-transform:uppercase;font-weight:700}
   .row{display:flex;gap:12px;padding:13px 18px;border-bottom:1px solid var(--line);align-items:flex-start}
-  .row .idx{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--dim);width:20px;padding-top:2px;flex:none}
+  .row .idx{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--dim);width:22px;padding-top:2px;flex:none}
   .row img{width:74px;height:74px;object-fit:cover;border:1px solid var(--line);flex:none;background:#e4e3de}
   .row .body{flex:1;min-width:0}
   .row .cmt{font-size:14px;line-height:1.35;word-wrap:break-word}
   .row .time{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--dim);margin-top:5px}
+  .row .pin{display:inline-block;font-family:'IBM Plex Mono',monospace;font-size:9.5px;
+    color:#0d1a22;background:var(--mark);padding:2px 5px;border-radius:2px;margin-top:5px}
   .row .kill{border:0;background:none;color:var(--flag);font-size:11px;font-weight:700;letter-spacing:.08em;padding:4px 0 0;cursor:pointer;text-transform:uppercase}
 
   .foot{position:fixed;bottom:0;left:0;right:0;max-width:560px;margin:0 auto;
@@ -82,6 +86,15 @@
   .form > div{margin-bottom:12px}
   .chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:7px}
   .chip{font-family:'IBM Plex Mono',monospace;font-size:11px;padding:5px 9px;border:1px solid var(--line);background:#fff;border-radius:2px;cursor:pointer}
+  .chip.on{background:var(--ink);color:var(--mark);border-color:var(--ink)}
+  .chip.miss{opacity:.4}
+  .locbtn{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;
+    background:#fff;border:1px solid var(--line);border-radius:2px;padding:11px 10px;cursor:pointer;
+    font-family:'Archivo',sans-serif;font-size:14px;color:var(--ink);text-align:left}
+  .locbtn em{font-style:normal;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--dim)}
+  .plchips{display:flex;gap:6px;overflow-x:auto;padding:9px 12px;background:#101a23;-webkit-overflow-scrolling:touch}
+  .plchips .chip{flex:none;background:#22303c;border-color:#22303c;color:#c7d3d8}
+  .plchips .chip.on{background:var(--mark);border-color:var(--mark);color:#0d1a22}
   .note{font-size:11px;color:var(--dim);line-height:1.45;padding:10px 18px}
   .status{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--mark);padding:8px 18px 0;min-height:20px}
 </style>
@@ -95,7 +108,7 @@
     <div class="btm">
       <div>
         <h1 id="mastTitle">Site Visit Report</h1>
-        <div class="sub">Field observation record</div>
+        <div class="sub" id="mastSub">Field observation record</div>
       </div>
       <div class="tally"><b id="tallyNum">0</b><span>Items</span></div>
     </div>
@@ -116,7 +129,7 @@
     </div>
     <div>
       <label class="lbl" for="fRef">Report no.</label>
-      <input id="fRef" placeholder="SVR-001">
+      <input id="fRef" placeholder="SVR-20260721-A">
     </div>
     <div style="grid-column:1/-1">
       <label class="lbl" for="fTo">Issued to</label>
@@ -135,7 +148,7 @@
   <div class="status" id="status"></div>
   <div class="entries" id="entries"></div>
 
-  <div class="note">Data stays on this device. Export the PDF before clearing.</div>
+  <div class="note">Data stays on this device. Export the PDF and file it before clearing. Item numbers are permanent - deleting an item leaves a gap rather than renumbering.</div>
 
   <div class="foot">
     <div class="btn-row">
@@ -165,18 +178,83 @@
       <div class="chips" id="zoneChips"></div>
     </div>
     <div>
+      <label class="lbl">Location on plan</label>
+      <button class="locbtn" id="eLoc"><span id="eLocTxt">Not set</span><em>Set pin</em></button>
+    </div>
+    <div>
       <label class="lbl" for="eCmt">Observation</label>
       <textarea id="eCmt" placeholder="Palm needs to move approx 2ft east"></textarea>
     </div>
   </div>
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<div class="sheet" id="plansheet" style="display:none;z-index:60">
+  <div class="sheet-top">
+    <button id="plCancel">Cancel</button>
+    <h2>Location on plan</h2>
+    <button id="plSave">Save</button>
+  </div>
+  <div class="plchips" id="plChips"></div>
+  <div class="canvas-wrap" style="flex:1"><canvas id="pcv"></canvas></div>
+  <div class="tools">
+    <button class="t" id="plClearPin">Remove pin</button>
+  </div>
+  <div class="note" id="plNote">Pick a level, then tap the plan to drop a pin.</div>
+</div>
+
+<!-- self-hosted so PDF export survives a dead signal.
+     Download jspdf.umd.min.js v2.5.1 once and commit it next to this file. -->
+<script src="jspdf.umd.min.js"></script>
 <script>
 (function(){
+
+  /* ==========================================================
+     FLOOR PLAN LIBRARY
+     Put the plan images in a /plans/ folder in the repo next to
+     this file. Rename labels and files to match the arch set.
+     Keep them small: 1600px wide JPEG, quality 70, under ~250KB.
+     A missing file just greys out that chip - nothing breaks.
+     ========================================================== */
+  var PLAN_DIR='plans/';
+  var PLANS=[
+    {id:'L01', label:'L01', file:'l01.jpg'},
+    {id:'L02', label:'L02', file:'l02.jpg'},
+    {id:'L03', label:'L03', file:'l03.jpg'},
+    {id:'L04', label:'L04', file:'l04.jpg'},
+    {id:'L05', label:'L05', file:'l05.jpg'},
+    {id:'L06', label:'L06', file:'l06.jpg'},
+    {id:'L07', label:'L07', file:'l07.jpg'},
+    {id:'L08', label:'L08', file:'l08.jpg'},
+    {id:'L09', label:'L09', file:'l09.jpg'},
+    {id:'L10', label:'L10', file:'l10.jpg'},
+    {id:'L11', label:'L11', file:'l11.jpg'},
+    {id:'L12', label:'L12', file:'l12.jpg'},
+    {id:'L13', label:'L13', file:'l13.jpg'}
+  ];
+
+  /* ==========================================================
+     CANONICAL ZONE LIST, keyed by project name (case-insensitive).
+     Free text still works for anything not listed.
+     PDF zone order follows this list, so reports stay comparable
+     week to week regardless of the order you walked the site.
+     ========================================================== */
+  var ZONES={
+    'cora merrick park':[
+      'Site / Perimeter','Garage','Lobby','Amenity Deck',
+      'Level 02','Level 03','Level 04','Level 05','Level 06',
+      'Roof','MEP','Landscape'
+    ]
+  };
+
+  /* Bump on every deploy. Shown in the masthead so you can read the
+     running build off the phone instead of guessing. */
+  var BUILD='2026-07-21-a';
+
   var KEY='svr_state_v1';
-  var state={proj:'',date:'',by:'',ref:'',to:'',items:[]};
+  var state={proj:'',date:'',by:'',ref:'',refAuto:true,to:'',seq:0,items:[]};
   var marks=[], cur=null, baseImg=null, editing=null, mode='pen', pending=[];
+  var editPlan=null;          /* {id,x,y} while the markup sheet is open */
+  var plDraft=null, plImg=null, plId=null;
 
   var LOGO_D='M246.61,0H113.39L0,331.73h360L246.61,0ZM177.17,21.57h5.66l87.73,257.02H89.43L177.17,21.57Z';
   var logoPng=null;
@@ -204,19 +282,63 @@
   var $=function(id){return document.getElementById(id)};
   function flash(m){ $('status').textContent=m; setTimeout(function(){ if($('status').textContent===m) $('status').textContent=''; },3500); }
 
+  /* --- FIX: local calendar date, not UTC. ISO slicing rolled the
+     date forward every evening after 8pm Miami time. --- */
+  function todayLocal(){
+    var d=new Date(), p=function(n){return String(n).padStart(2,'0')};
+    return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate());
+  }
+  function autoRef(dateStr){
+    return 'SVR-'+String(dateStr||todayLocal()).replace(/-/g,'')+'-A';
+  }
+  function planById(id){ for(var i=0;i<PLANS.length;i++) if(PLANS[i].id===id) return PLANS[i]; return null; }
+  function planLabel(p){ var d=p&&planById(p.id); return d?d.label:(p?p.id:''); }
+
   (async function(){
     var s=await store.get();
     if(s) state=Object.assign(state,s);
-    if(!state.date) state.date=new Date().toISOString().slice(0,10);
+    if(!state.date) state.date=todayLocal();
+
+    /* migrate: give any pre-existing item a permanent number */
+    var maxNo=state.seq||0;
+    state.items.forEach(function(it){ if(typeof it.no==='number' && it.no>maxNo) maxNo=it.no; });
+    state.items.forEach(function(it){ if(typeof it.no!=='number'){ maxNo++; it.no=maxNo; } });
+    state.seq=maxNo;
+
+    if(!state.ref){ state.ref=autoRef(state.date); state.refAuto=true; }
     $('fProj').value=state.proj||''; $('fDate').value=state.date;
     $('fBy').value=state.by||''; $('fRef').value=state.ref||''; $('fTo').value=state.to||'';
+    store.set(state);
     render();
   })();
 
+  $('mastSub').textContent='Field observation record  /  Build '+BUILD;
+
+  /* ---- offline support ----
+     The worker serves index.html network-first with a short timeout, so a
+     new deploy is picked up on the next online launch with no version bump.
+     Everything else is cache-first, so the app opens with no signal. */
+  if('serviceWorker' in navigator){
+    window.addEventListener('load',function(){
+      navigator.serviceWorker.register('sw.js',{updateViaCache:'none'})
+        .then(function(reg){
+          reg.update();
+          document.addEventListener('visibilitychange',function(){
+            if(!document.hidden && navigator.onLine) reg.update();
+          });
+        })
+        .catch(function(){});
+    });
+  }
+  window.addEventListener('offline',function(){ flash('Offline - capture and export still work'); });
+  window.addEventListener('online',function(){ flash('Back online'); });
+
+  $('fRef').addEventListener('input',function(){ state.refAuto=false; });
   ['fProj','fDate','fBy','fRef','fTo'].forEach(function(id){
     $(id).addEventListener('input',function(){
       state.proj=$('fProj').value; state.date=$('fDate').value; state.by=$('fBy').value;
       state.ref=$('fRef').value; state.to=$('fTo').value;
+      if(state.refAuto){ state.ref=autoRef(state.date); $('fRef').value=state.ref; }
       $('mastTitle').textContent=state.proj||'Site Visit Report';
       store.set(state);
     });
@@ -250,11 +372,13 @@
   }
   function nextPending(){ if(pending.length) readImage(pending.shift()); }
 
+  /* ---------------- markup canvas ---------------- */
   var cv=$('cv'), ctx=cv.getContext('2d');
   function penW(){ return Math.max(2.2, cv.width/165); }
 
   function openEditor(dataUrl,ts,existing){
-    editing = existing || {id:Date.now()+'_'+Math.random().toString(36).slice(2), src:dataUrl, ts:ts, zone:'', cmt:''};
+    editing = existing || {id:Date.now()+'_'+Math.random().toString(36).slice(2), src:dataUrl, ts:ts, zone:'', cmt:'', plan:null, no:null};
+    editPlan = editing.plan ? {id:editing.plan.id,x:editing.plan.x,y:editing.plan.y} : null;
     marks=[]; cur=null; setMode('pen');
     baseImg=new Image();
     baseImg.onload=function(){
@@ -265,7 +389,7 @@
       redraw();
       $('sheet').style.display='flex';
       $('eZone').value=editing.zone||''; $('eCmt').value=editing.cmt||'';
-      buildChips();
+      buildChips(); updateLocBtn();
     };
     baseImg.src=editing.src;
   }
@@ -291,15 +415,15 @@
     ctx.drawImage(baseImg,0,0,cv.width,cv.height);
     paint(ctx,1);
   }
-  function pt(e){ var r=cv.getBoundingClientRect(); return {x:(e.clientX-r.left)*(cv.width/r.width), y:(e.clientY-r.top)*(cv.height/r.height)}; }
+  function pt(e,el){ var r=el.getBoundingClientRect(); return {x:(e.clientX-r.left)*(el.width/r.width), y:(e.clientY-r.top)*(el.height/r.height)}; }
 
   cv.addEventListener('pointerdown',function(e){
     e.preventDefault(); cv.setPointerCapture(e.pointerId);
-    var p=pt(e);
+    var p=pt(e,cv);
     cur = mode==='rect' ? {type:'rect',x:p.x,y:p.y,x2:p.x,y2:p.y} : {type:'pen',pts:[p]};
   });
   cv.addEventListener('pointermove',function(e){
-    if(!cur) return; e.preventDefault(); var p=pt(e);
+    if(!cur) return; e.preventDefault(); var p=pt(e,cv);
     if(cur.type==='rect'){ cur.x2=p.x; cur.y2=p.y; } else cur.pts.push(p);
     redraw();
   });
@@ -329,31 +453,142 @@
     editing.src=out.toDataURL('image/jpeg',0.72);
     editing.zone=$('eZone').value.trim();
     editing.cmt=$('eCmt').value.trim();
+    editing.plan=editPlan?{id:editPlan.id,x:editPlan.x,y:editPlan.y}:null;
     var i=state.items.findIndex(function(x){return x.id===editing.id});
-    if(i>=0) state.items[i]=editing; else state.items.push(editing);
+    if(i>=0){ state.items[i]=editing; }
+    else{
+      /* FIX: permanent item number assigned once, never reused.
+         Deleting leaves a gap on purpose - a number you have
+         already emailed must never point at a different photo. */
+      state.seq=(state.seq||0)+1;
+      editing.no=state.seq;
+      state.items.push(editing);
+    }
     store.set(state);
-    $('sheet').style.display='none'; editing=null;
+    $('sheet').style.display='none'; editing=null; editPlan=null;
     render(); nextPending();
   });
 
+  function projZones(){
+    var k=(state.proj||'').trim().toLowerCase();
+    return ZONES[k]||[];
+  }
   function buildChips(){
-    var seen=[], box=$('zoneChips'); box.innerHTML='';
+    var box=$('zoneChips'); box.innerHTML='';
+    var seen=projZones().slice();
     state.items.forEach(function(it){ if(it.zone && seen.indexOf(it.zone)<0) seen.push(it.zone); });
-    seen.slice(-6).forEach(function(z){
+    seen.forEach(function(z){
       var b=document.createElement('button'); b.className='chip'; b.textContent=z;
-      b.onclick=function(){ $('eZone').value=z; };
+      if($('eZone').value===z) b.classList.add('on');
+      b.onclick=function(){ $('eZone').value=z; buildChips(); };
       box.appendChild(b);
     });
   }
 
+  /* ---------------- plan pin sheet ---------------- */
+  var pcv=$('pcv'), pctx=pcv.getContext('2d');
+  var planCache={};
+
+  function loadPlan(id,cb){
+    if(Object.prototype.hasOwnProperty.call(planCache,id)) return cb(planCache[id]);
+    var d=planById(id); if(!d){ planCache[id]=null; return cb(null); }
+    var im=new Image();
+    im.onload=function(){ planCache[id]=im; cb(im); };
+    im.onerror=function(){ planCache[id]=null; cb(null); };
+    im.src=PLAN_DIR+d.file;
+  }
+
+  function drawPin(c,x,y,r,num){
+    c.save();
+    c.beginPath(); c.arc(x,y,r,0,Math.PI*2);
+    c.fillStyle='rgba(225,29,29,.88)'; c.fill();
+    c.lineWidth=Math.max(1.5,r*0.22); c.strokeStyle='#fff'; c.stroke();
+    c.beginPath();
+    c.moveTo(x-r*1.9,y); c.lineTo(x-r*1.15,y);
+    c.moveTo(x+r*1.15,y); c.lineTo(x+r*1.9,y);
+    c.moveTo(x,y-r*1.9); c.lineTo(x,y-r*1.15);
+    c.moveTo(x,y+r*1.15); c.lineTo(x,y+r*1.9);
+    c.strokeStyle='rgba(225,29,29,.9)'; c.lineWidth=Math.max(1.2,r*0.2); c.stroke();
+    if(num!=null){
+      c.fillStyle='#fff';
+      c.font='700 '+Math.round(r*1.25)+'px Archivo, sans-serif';
+      c.textAlign='center'; c.textBaseline='middle';
+      c.fillText(String(num),x,y+r*0.05);
+    }
+    c.restore();
+  }
+
+  function paintPlanCanvas(){
+    if(!plImg){ pcv.width=10; pcv.height=10; return; }
+    var maxW=Math.min(window.innerWidth,560);
+    var maxH=Math.round(window.innerHeight*0.5);
+    var k=Math.min(maxW/plImg.width, maxH/plImg.height);
+    pcv.width=Math.round(plImg.width*k); pcv.height=Math.round(plImg.height*k);
+    pctx.clearRect(0,0,pcv.width,pcv.height);
+    pctx.drawImage(plImg,0,0,pcv.width,pcv.height);
+    if(plDraft && plDraft.id===plId){
+      drawPin(pctx, plDraft.x*pcv.width, plDraft.y*pcv.height, Math.max(10,pcv.width/38), null);
+    }
+  }
+
+  function buildPlanChips(){
+    var box=$('plChips'); box.innerHTML='';
+    PLANS.forEach(function(p){
+      var b=document.createElement('button'); b.className='chip'; b.textContent=p.label;
+      if(p.id===plId) b.classList.add('on');
+      if(planCache[p.id]===null) b.classList.add('miss');
+      b.onclick=function(){ selectPlan(p.id); };
+      box.appendChild(b);
+    });
+  }
+
+  function selectPlan(id){
+    plId=id; buildPlanChips();
+    $('plNote').textContent='Loading '+id+'...';
+    loadPlan(id,function(im){
+      plImg=im; buildPlanChips();
+      if(!im){ $('plNote').textContent='No image found at '+PLAN_DIR+(planById(id)||{}).file+' - add it to the repo.'; pcv.width=10;pcv.height=10; return; }
+      $('plNote').textContent='Tap the plan to drop a pin. Tap again to move it.';
+      paintPlanCanvas();
+    });
+  }
+
+  pcv.addEventListener('pointerdown',function(e){
+    if(!plImg) return;
+    e.preventDefault();
+    var p=pt(e,pcv);
+    plDraft={id:plId, x:Math.min(1,Math.max(0,p.x/pcv.width)), y:Math.min(1,Math.max(0,p.y/pcv.height))};
+    paintPlanCanvas();
+  });
+
+  function updateLocBtn(){
+    $('eLocTxt').textContent = editPlan ? (planLabel(editPlan)+' - pin set') : 'Not set';
+  }
+  $('eLoc').addEventListener('click',function(){
+    plDraft = editPlan ? {id:editPlan.id,x:editPlan.x,y:editPlan.y} : null;
+    plId = (editPlan&&editPlan.id) || (PLANS[0]&&PLANS[0].id) || null;
+    $('plansheet').style.display='flex';
+    buildPlanChips();
+    if(plId) selectPlan(plId); else $('plNote').textContent='No plans configured in PLANS[].';
+  });
+  $('plCancel').addEventListener('click',function(){ $('plansheet').style.display='none'; });
+  $('plClearPin').addEventListener('click',function(){ plDraft=null; paintPlanCanvas(); });
+  $('plSave').addEventListener('click',function(){
+    editPlan = plDraft ? {id:plDraft.id,x:plDraft.x,y:plDraft.y} : null;
+    updateLocBtn();
+    $('plansheet').style.display='none';
+  });
+
+  /* ---------------- list ---------------- */
   function ordered(){
-    var zones=[], out=[];
+    var canon=projZones().slice(), zones=canon.slice(), out=[];
     state.items.forEach(function(it){ var z=it.zone||'Unassigned'; if(zones.indexOf(z)<0) zones.push(z); });
     zones.forEach(function(z){ state.items.forEach(function(it){ if((it.zone||'Unassigned')===z) out.push(it); }); });
     return out;
   }
   function fmt(ts){ var d=new Date(ts); return d.toLocaleString([], {month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}); }
   function esc(s){ return (s||'').replace(/[&<>]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;'}[c]}); }
+  function num(it){ return String(it.no==null?'?':it.no).padStart(2,'0'); }
 
   function render(){
     $('tallyNum').textContent=state.items.length;
@@ -362,16 +597,20 @@
     if(!state.items.length){ e.innerHTML='<div class="empty"><strong>No items yet</strong>Take a photo, mark it up, write the note. Do it standing in front of the issue.</div>'; return; }
     e.innerHTML='';
     var list=ordered(), lastZone=null;
-    list.forEach(function(it,i){
+    list.forEach(function(it){
       var z=it.zone||'Unassigned';
       if(z!==lastZone){ var band=document.createElement('div'); band.className='zoneband'; band.textContent=z; e.appendChild(band); lastZone=z; }
       var d=document.createElement('div'); d.className='row';
-      var n=document.createElement('div'); n.className='idx'; n.textContent=String(i+1).padStart(2,'0');
+      var n=document.createElement('div'); n.className='idx'; n.textContent=num(it);
       var im=document.createElement('img'); im.src=it.src; im.onclick=function(){ openEditor(it.src,it.ts,it); };
       var b=document.createElement('div'); b.className='body';
-      b.innerHTML='<div class="cmt">'+esc(it.cmt)+'</div><div class="time">'+fmt(it.ts)+'</div>';
+      var pinHtml=it.plan?'<div><span class="pin">'+esc(planLabel(it.plan))+'</span></div>':'';
+      b.innerHTML='<div class="cmt">'+esc(it.cmt)+'</div>'+pinHtml+'<div class="time">'+fmt(it.ts)+'</div>';
       var k=document.createElement('button'); k.className='kill'; k.textContent='Remove';
-      k.onclick=function(){ state.items=state.items.filter(function(x){return x.id!==it.id}); store.set(state); render(); };
+      k.onclick=function(){
+        if(!confirm('Remove item '+num(it)+'? The number stays retired.')) return;
+        state.items=state.items.filter(function(x){return x.id!==it.id}); store.set(state); render();
+      };
       b.appendChild(k);
       d.appendChild(n); d.appendChild(im); d.appendChild(b);
       e.appendChild(d);
@@ -381,14 +620,39 @@
   $('btnClear').addEventListener('click',function(){
     if(!state.items.length) return;
     if(confirm('Delete all '+state.items.length+' items? Export first if you need the PDF.')){
-      state.items=[]; store.set(state); render();
+      state.items=[]; state.seq=0; state.refAuto=true; state.ref=autoRef(state.date);
+      $('fRef').value=state.ref; store.set(state); render();
     }
   });
 
+  /* ---------------- PDF ---------------- */
   $('btnPdf').addEventListener('click',function(){
+    if(!window.jspdf){ flash('PDF library missing - check jspdf.umd.min.js is in the repo'); return; }
     if(!state.items.length){ flash('Nothing to export yet'); return; }
-    flash('Building PDF...'); setTimeout(buildPdf,60);
+    flash('Building PDF...');
+    var ids=[];
+    state.items.forEach(function(it){ if(it.plan && ids.indexOf(it.plan.id)<0) ids.push(it.plan.id); });
+    var left=ids.length;
+    if(!left) return setTimeout(buildPdf,60);
+    ids.forEach(function(id){ loadPlan(id,function(){ if(--left===0) setTimeout(buildPdf,60); }); });
   });
+
+  /* keyplan raster with the pin burned in, ready for jsPDF */
+  function keyplanUrl(it){
+    if(!it.plan) return null;
+    var im=planCache[it.plan.id];
+    if(!im) return null;
+    try{
+      var MAXP=900, k=Math.min(1, MAXP/Math.max(im.width,im.height));
+      var c=document.createElement('canvas');
+      c.width=Math.round(im.width*k); c.height=Math.round(im.height*k);
+      var x=c.getContext('2d');
+      x.fillStyle='#fff'; x.fillRect(0,0,c.width,c.height);
+      x.drawImage(im,0,0,c.width,c.height);
+      drawPin(x, it.plan.x*c.width, it.plan.y*c.height, Math.max(11,c.width/26), it.no);
+      return {url:c.toDataURL('image/jpeg',0.8), w:c.width, h:c.height};
+    }catch(e){ return null; }
+  }
 
   function buildPdf(){
     var jsPDF=window.jspdf.jsPDF;
@@ -397,6 +661,7 @@
     var proj=state.proj||'Site Visit Report';
     var list=ordered();
     var INK=[20,32,43], MARK=[123,167,175], MID=[109,118,128], HAIR=[214,213,208];
+    var FOOT=64;
 
     function brandbar(full){
       doc.setFillColor(INK[0],INK[1],INK[2]);
@@ -417,7 +682,6 @@
       }
     }
 
-    /* metadata block, page 1 only */
     function metaBlock(y){
       var cols=[
         ['PROJECT', proj],
@@ -448,72 +712,104 @@
     brandbar(true);
     y=metaBlock(122);
 
-    /* summary table, grouped by zone */
-    doc.setFillColor(236,235,231); doc.rect(M,y,W-2*M,18,'F');
-    doc.setFont('helvetica','bold'); doc.setFontSize(6.8); doc.setTextColor(MID[0],MID[1],MID[2]);
-    doc.text('#',M+8,y+12,{charSpace:1.1});
-    doc.text('PHOTO',M+30,y+12,{charSpace:1.1});
-    doc.text('OBSERVATION',M+124,y+12,{charSpace:1.1});
-    y+=18;
+    /* ---- summary table, grouped by zone, rows sized to content ---- */
+    function tableHead(yy){
+      doc.setFillColor(236,235,231); doc.rect(M,yy,W-2*M,18,'F');
+      doc.setFont('helvetica','bold'); doc.setFontSize(6.8); doc.setTextColor(MID[0],MID[1],MID[2]);
+      doc.text('#',M+8,yy+12,{charSpace:1.1});
+      doc.text('PHOTO',M+30,yy+12,{charSpace:1.1});
+      doc.text('OBSERVATION',M+124,yy+12,{charSpace:1.1});
+      return yy+18;
+    }
+    y=tableHead(y);
 
-    var TH=62, TW=78, CX=M+124, lastZone=null;
-    list.forEach(function(it,i){
+    var TH=62, TW=78, CX=M+124, LH=11.5, lastZone=null;
+    list.forEach(function(it){
       var z=it.zone||'Unassigned';
+      doc.setFont('helvetica','normal'); doc.setFontSize(9.5);
+      var lines=doc.splitTextToSize(it.cmt||'', W-M-CX);
+      /* FIX: row grows with the text instead of overrunning the next row */
+      var rowH=Math.max(TH, lines.length*LH+4)+20;
       var need=(z!==lastZone);
-      if(y+TH+20+(need?22:0)>H-58){ doc.addPage(); brandbar(false); y=78; lastZone=null; need=true; }
+      if(y+rowH+(need?21:0) > H-FOOT){
+        doc.addPage(); brandbar(false); y=78; lastZone=null; need=true;
+      }
       if(need){
         doc.setFillColor(INK[0],INK[1],INK[2]); doc.rect(M,y,W-2*M,16,'F');
         doc.setFont('helvetica','bold'); doc.setFontSize(7); doc.setTextColor(MARK[0],MARK[1],MARK[2]);
         doc.text(z.toUpperCase(),M+8,y+11,{charSpace:1.8});
-        y+=16+5; lastZone=z;
+        y+=21; lastZone=z;
       }
       doc.setDrawColor(HAIR[0],HAIR[1],HAIR[2]); doc.line(M,y,W-M,y);
       var ty=y+11;
-      doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(INK[0],INK[1],INK[2]);
-      doc.text(String(i+1),M+8,ty+8);
+      doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(INK[0],INK[1],INK[2]);
+      doc.text(String(it.no==null?'-':it.no),M+8,ty+8);
       try{ doc.addImage(it.src,'JPEG',M+30,ty,TW,TH); }catch(e){}
-      doc.setFontSize(9.5); doc.setTextColor(35,45,55);
-      doc.text(doc.splitTextToSize(it.cmt,W-M-CX),CX,ty+9);
+      doc.setFont('helvetica','normal'); doc.setFontSize(9.5); doc.setTextColor(35,45,55);
+      doc.text(lines,CX,ty+9,{lineHeightFactor:1.21});
       doc.setFontSize(7); doc.setTextColor(160,168,175);
-      doc.text(fmt(it.ts),CX,ty+TH+1);
-      y+=TH+20;
+      var meta=fmt(it.ts)+(it.plan?'    PLAN '+planLabel(it.plan):'');
+      doc.text(meta,CX,ty+Math.max(TH,lines.length*LH+4)+1);
+      y+=rowH;
     });
 
-    /* appendix, two per page */
-    var TOP=78, BOT=58, SLOT=(H-TOP-BOT)/2;
+    /* ---- appendix, two per page, full text, optional keyplan ---- */
+    var TOP=78, SLOT=(H-TOP-FOOT)/2;
     list.forEach(function(it,i){
       var slot=i%2;
       if(slot===0){ doc.addPage(); brandbar(false); }
       var top=TOP+slot*SLOT;
       if(slot===1){ doc.setDrawColor(HAIR[0],HAIR[1],HAIR[2]); doc.line(M,top-12,W-M,top-12); }
 
-      doc.setFont('helvetica','bold'); doc.setFontSize(7); doc.setTextColor(MARK[0]-30,MARK[1]-30,MARK[2]-30);
-      doc.text('ITEM '+(i+1),M,top+2,{charSpace:1.4});
+      doc.setFont('helvetica','bold'); doc.setFontSize(7); doc.setTextColor(93,137,145);
+      doc.text('ITEM '+(it.no==null?'-':it.no),M,top+2,{charSpace:1.4});
       doc.setFont('helvetica','bold'); doc.setFontSize(10.5); doc.setTextColor(INK[0],INK[1],INK[2]);
-      doc.text(it.zone||'Unassigned',M+46,top+3);
+      doc.text(it.zone||'Unassigned',M+52,top+3);
       doc.setFont('helvetica','normal'); doc.setFontSize(7); doc.setTextColor(160,168,175);
-      doc.text(fmt(it.ts),W-M,top+2,{align:'right'});
+      doc.text(fmt(it.ts)+(it.plan?'   /   PLAN '+planLabel(it.plan):''),W-M,top+2,{align:'right'});
 
+      /* FIX: caption no longer hard-clipped at 2 lines */
       doc.setFont('helvetica','normal'); doc.setFontSize(9.5); doc.setTextColor(35,45,55);
-      var lines=doc.splitTextToSize(it.cmt,W-2*M).slice(0,2);
-      doc.text(lines,M,top+18);
+      var lines=doc.splitTextToSize(it.cmt||'', W-2*M);
+      var MAXL=5, clipped=false;
+      if(lines.length>MAXL){ lines=lines.slice(0,MAXL); clipped=true; }
+      doc.text(lines,M,top+18,{lineHeightFactor:1.21});
+      if(clipped){
+        doc.setFontSize(6.5); doc.setTextColor(160,168,175);
+        doc.text('(observation continues in the summary table)',M,top+18+lines.length*11.5+2);
+      }
 
-      var imgTop=top+18+lines.length*12+6;
-      var availH=(top+SLOT-16)-imgTop, availW=W-2*M;
+      var imgTop=top+18+lines.length*11.5+(clipped?12:6);
+      var availH=(top+SLOT-16)-imgTop;
+      var kp=keyplanUrl(it);
+      var KPW=kp?132:0, GAP=kp?14:0;
+      var availW=W-2*M-KPW-GAP;
+
       var props; try{ props=doc.getImageProperties(it.src); }catch(e){ props={width:4,height:3}; }
       var k=Math.min(availW/props.width, availH/props.height);
       var w=props.width*k, h=props.height*k;
       try{ doc.addImage(it.src,'JPEG',M+(availW-w)/2,imgTop,w,h); }catch(e){}
+
+      if(kp){
+        var kk=Math.min(KPW/kp.w, availH/kp.h);
+        var kw=kp.w*kk, kh=kp.h*kk, kx=W-M-KPW+(KPW-kw)/2;
+        doc.setFillColor(255,255,255); doc.rect(kx-3,imgTop-3,kw+6,kh+6,'F');
+        doc.setDrawColor(HAIR[0],HAIR[1],HAIR[2]); doc.rect(kx-3,imgTop-3,kw+6,kh+6);
+        try{ doc.addImage(kp.url,'JPEG',kx,imgTop,kw,kh); }catch(e){}
+        doc.setFont('helvetica','bold'); doc.setFontSize(6.2); doc.setTextColor(MID[0],MID[1],MID[2]);
+        doc.text('KEY PLAN - '+planLabel(it.plan).toUpperCase(), kx, imgTop+kh+11, {charSpace:1});
+      }
     });
 
-    /* footers */
+    /* ---- footers ---- */
     var tot=doc.getNumberOfPages();
     for(var p=1;p<=tot;p++){
       doc.setPage(p);
-      doc.setDrawColor(HAIR[0],HAIR[1],HAIR[2]); doc.line(M,H-44,W-M,H-44);
+      doc.setDrawColor(HAIR[0],HAIR[1],HAIR[2]); doc.line(M,H-50,W-M,H-50);
       doc.setFont('helvetica','normal'); doc.setFontSize(6.5); doc.setTextColor(150,158,166);
-      doc.text('Field observations only. Not a directive to change contract scope, schedule, or cost.',M,H-32);
-      doc.text('Page '+p+' of '+tot,W-M,H-32,{align:'right'});
+      doc.text('Observations recorded during a general site visit. Not an exhaustive inspection and not a directive to change contract scope, schedule, or cost.',M,H-38);
+      doc.text('Neither the inclusion nor the omission of an item constitutes approval, acceptance, or rejection of the Work.',M,H-29);
+      doc.text('Page '+p+' of '+tot,W-M,H-29,{align:'right'});
     }
 
     var nm=[(state.ref||'SVR'),proj,(state.date||'')].join('-').replace(/[^a-z0-9-]+/gi,'-').replace(/-+/g,'-').toLowerCase();
