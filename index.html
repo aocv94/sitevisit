@@ -344,7 +344,8 @@
       store.set(state);
     });
   });
-
+$('fProj').addEventListener('change', function(){ buildChips(); });
+  
   function handleFiles(files){
     var list=Array.prototype.slice.call(files);
     if(!list.length) return;
@@ -466,6 +467,7 @@
       state.items.push(editing);
     }
     store.set(state);
+    buildChips();
     $('sheet').style.display='none'; editing=null; editPlan=null;
     render(); nextPending();
   });
@@ -730,8 +732,8 @@
       doc.setFont('helvetica','normal'); doc.setFontSize(9.5);
       var lines=doc.splitTextToSize(it.cmt||'', W-M-CX);
       /* FIX: row grows with the text instead of overrunning the next row */
-      var rowH=Math.max(TH, lines.length*LH+4)+20;
-      var need=(z!==lastZone);
+      var textHeight = Math.max(TH, lines.length * LH + 4);
+      var rowH = textHeight + 20;      var need=(z!==lastZone);
       if(y+rowH+(need?21:0) > H-FOOT){
         doc.addPage(); brandbar(false); y=78; lastZone=null; need=true;
       }
