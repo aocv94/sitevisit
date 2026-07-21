@@ -453,6 +453,16 @@ $('fProj').addEventListener('change', function(){ buildChips(); });
     o.drawImage(baseImg,0,0);
     paint(o, baseImg.width/cv.width);
     editing.src=out.toDataURL('image/jpeg',0.72);
+    // Create thumbnail for PDF summary table
+      var thumbCanvas = document.createElement('canvas');
+      thumbCanvas.width = 74; thumbCanvas.height = 74;
+      var tCtx = thumbCanvas.getContext('2d');
+      var thumbImg = new Image();
+      thumbImg.onload = function(){
+        tCtx.drawImage(thumbImg, 0, 0, 74, 74);
+        editing.thumb = thumbCanvas.toDataURL('image/jpeg', 0.5);
+};
+thumbImg.src = editing.src;
     editing.zone=$('eZone').value.trim();
     editing.cmt=$('eCmt').value.trim();
     editing.plan=editPlan?{id:editPlan.id,x:editPlan.x,y:editPlan.y}:null;
@@ -747,7 +757,7 @@ $('fProj').addEventListener('change', function(){ buildChips(); });
       var ty=y+11;
       doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(INK[0],INK[1],INK[2]);
       doc.text(String(it.no==null?'-':it.no),M+8,ty+8);
-      try{ doc.addImage(it.src,'JPEG',M+30,ty,TW,TH); }catch(e){}
+      try{ doc.addImage(it.src,'JPEG',M+30,ty,TW,TH); }catch(e){ console.log('Image failed for item', it.no, e.message); }
       doc.setFont('helvetica','normal'); doc.setFontSize(9.5); doc.setTextColor(35,45,55);
       doc.text(lines,CX,ty+9,{lineHeightFactor:1.21});
       doc.setFontSize(7); doc.setTextColor(160,168,175);
