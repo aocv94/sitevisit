@@ -596,7 +596,8 @@
     const thumbCanvas = document.createElement('canvas');
     thumbCanvas.width = 150; thumbCanvas.height = 150;
     const tCtx = thumbCanvas.getContext('2d');
-    tCtx.drawImage(out, 0, 0, 74, 74);
+    // Draw from baseImg (the original photo) not 'out' (which has markup)
+    tCtx.drawImage(baseImg, 0, 0, 150, 150);
     editing.thumb = thumbCanvas.toDataURL('image/jpeg', 0.5);
     
     editing.zone=$('eZone').value.trim();
