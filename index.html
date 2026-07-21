@@ -172,7 +172,7 @@
   .locbtn{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;
     background:var(--card);border:1px solid var(--line);border-radius:2px;padding:11px 10px;cursor:pointer;
     font-family:'Archivo',sans-serif;font-size:14px;color:var(--text);text-align:left}
-  .locbtn em{font-style:normal;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--dim)}
+  .locbtn em{font-style:normal;font-family:'Archivo',sans-serif;font-size:13px;color:var(--dim);font-weight:400}
   .form input,
   .form textarea,
   .form .locbtn {
@@ -505,8 +505,8 @@
     marks=[]; cur=null; setMode('pen');
     baseImg=new Image();
     baseImg.onload=function(){
-      const maxW=Math.min(window.innerWidth,560);
-      const maxH=Math.round(window.innerHeight*0.42);
+      const maxW=Math.min(window.innerWidth*1.5,840);
+      const maxH=Math.round(window.innerHeight*0.6);
       const k=Math.min(maxW/baseImg.width, maxH/baseImg.height, 1);
       cv.width=Math.round(baseImg.width*k); cv.height=Math.round(baseImg.height*k);
       redraw();
@@ -594,7 +594,7 @@
     
     // Create thumbnail for PDF summary table
     const thumbCanvas = document.createElement('canvas');
-    thumbCanvas.width = 74; thumbCanvas.height = 74;
+    thumbCanvas.width = 150; thumbCanvas.height = 150;
     const tCtx = thumbCanvas.getContext('2d');
     tCtx.drawImage(out, 0, 0, 74, 74);
     editing.thumb = thumbCanvas.toDataURL('image/jpeg', 0.5);
@@ -669,8 +669,8 @@
 
   function paintPlanCanvas(){
     if(!plImg){ pcv.width=10; pcv.height=10; return; }
-    const maxW=Math.min(window.innerWidth,560);
-    const maxH=Math.round(window.innerHeight*0.5);
+    const maxW=Math.min(window.innerWidth*1.5,840);
+    const maxH=Math.round(window.innerHeight*0.6);
     const k=Math.min(maxW/plImg.width, maxH/plImg.height);
     pcv.width=Math.round(plImg.width*k);
     pcv.height=Math.round(plImg.height*k);
