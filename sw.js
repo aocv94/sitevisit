@@ -13,7 +13,6 @@ var VERSION = 'svr-v1';
 var TIMEOUT = 2500;
 
 var SHELL = [
-  './',
   './index.html',
   './manifest.json',
   './jspdf.umd.min.js'
