@@ -211,37 +211,30 @@
 
   /* ==========================================================
      FLOOR PLAN LIBRARY
-     Put the plan images in a /plans/ folder in the repo next to
-     this file. Rename labels and files to match the arch set.
-     Keep them small: 1600px wide JPEG, quality 70, under ~250KB.
-     A missing file just greys out that chip - nothing breaks.
      ========================================================== */
-  var PLAN_DIR='plans/';
-  var PLANS=[
-      {id:'101', label:'101', file:'101.jpg'},
-      {id:'102', label:'102', file:'102.jpg'},
-      {id:'103', label:'103', file:'103.jpg'},
-      {id:'103a', label:'103A', file:'103a.jpg'},
-      {id:'104', label:'104', file:'104.jpg'},
-      {id:'105', label:'105', file:'105.jpg'},
-      {id:'106', label:'106', file:'106.jpg'},
-      {id:'107', label:'107', file:'107.jpg'},
-      {id:'108', label:'108', file:'108.jpg'},
-      {id:'109', label:'109', file:'109.jpg'},
-      {id:'110', label:'110', file:'110.jpg'},
-      {id:'111', label:'111', file:'111.jpg'},
-      {id:'112', label:'112', file:'112.jpg'},
-      {id:'113', label:'113', file:'113.jpg'},
-      {id:'114', label:'114', file:'114.jpg'}
+  const PLAN_DIR='plans/';
+  const PLANS=[
+    {id:'101', label:'101', file:'101.jpg'},
+    {id:'102', label:'102', file:'102.jpg'},
+    {id:'103', label:'103', file:'103.jpg'},
+    {id:'103a', label:'103A', file:'103a.jpg'},
+    {id:'104', label:'104', file:'104.jpg'},
+    {id:'105', label:'105', file:'105.jpg'},
+    {id:'106', label:'106', file:'106.jpg'},
+    {id:'107', label:'107', file:'107.jpg'},
+    {id:'108', label:'108', file:'108.jpg'},
+    {id:'109', label:'109', file:'109.jpg'},
+    {id:'110', label:'110', file:'110.jpg'},
+    {id:'111', label:'111', file:'111.jpg'},
+    {id:'112', label:'112', file:'112.jpg'},
+    {id:'113', label:'113', file:'113.jpg'},
+    {id:'114', label:'114', file:'114.jpg'}
   ];
 
   /* ==========================================================
-     CANONICAL ZONE LIST, keyed by project name (case-insensitive).
-     Free text still works for anything not listed.
-     PDF zone order follows this list, so reports stay comparable
-     week to week regardless of the order you walked the site.
+     CANONICAL ZONE LIST
      ========================================================== */
-  var ZONES={
+  const ZONES={
     'cora merrick park':[
       'Site / Perimeter','Garage','Lobby','Amenity Deck',
       'Level 02','Level 03','Level 04','Level 05','Level 06',
@@ -249,61 +242,81 @@
     ]
   };
 
-  /* Bump on every deploy. Shown in the masthead so you can read the
-     running build off the phone instead of guessing. */
-  var BUILD='2026-07-21-b';
+  const BUILD='2026-07-21-b';
+  const KEY='svr_state_v1';
 
-  var KEY='svr_state_v1';
-  var state={proj:'',date:'',by:'',ref:'',refAuto:true,to:'',seq:0,items:[]};
-  var marks=[], cur=null, baseImg=null, editing=null, mode='pen', pending=[];
-  var editPlan=null;          /* {id,x,y} while the markup sheet is open */
-  var plDraft=null, plImg=null, plId=null;
+  let state={proj:'',date:'',by:'',ref:'',refAuto:true,to:'',seq:0,items:[]};
+  let marks=[], cur=null, baseImg=null, editing=null, mode='pen', pending=[];
+  let editPlan=null;
+  let plDraft=null, plImg=null, plId=null;
 
-  var LOGO_D='M246.61,0H113.39L0,331.73h360L246.61,0ZM177.17,21.57h5.66l87.73,257.02H89.43L177.17,21.57Z';
-  var logoPng=null;
+  const LOGO_D='M246.61,0H113.39L0,331.73h360L246.61,0ZM177.17,21.57h5.66l87.73,257.02H89.43L177.17,21.57Z';
+  let logoPng=null;
   function makeLogo(hex,scale){
-    var c=document.createElement('canvas');
+    const c=document.createElement('canvas');
     c.width=Math.round(360*scale); c.height=Math.round(331.73*scale);
-    var x=c.getContext('2d'); x.scale(scale,scale);
+    const x=c.getContext('2d'); x.scale(scale,scale);
     x.fillStyle=hex; x.fill(new Path2D(LOGO_D));
     return c.toDataURL('image/png');
   }
   try{ logoPng=makeLogo('#7ba7af',0.6); }catch(e){ logoPng=null; }
 
-  var store={
+  const store={
     get:async function(){
-      try{ if(window.storage&&window.storage.get){var r=await window.storage.get(KEY,false);return r&&r.value?JSON.parse(r.value):null;} }catch(e){}
-      try{ var s=localStorage.getItem(KEY); return s?JSON.parse(s):null; }catch(e){ return null; }
+      try{ if(window.storage&&window.storage.get){const r=await window.storage.get(KEY,false);return r&&r.value?JSON.parse(r.value):null;} }catch(e){}
+      try{ const s=localStorage.getItem(KEY); return s?JSON.parse(s):null; }catch(e){ return null; }
     },
     set:async function(v){
-      var s=JSON.stringify(v);
+      const s=JSON.stringify(v);
       try{ if(window.storage&&window.storage.set){ await window.storage.set(KEY,s,false); return; } }catch(e){}
       try{ localStorage.setItem(KEY,s); }catch(e){ flash('Storage full - export the PDF now'); }
     }
   };
 
-  var $=function(id){return document.getElementById(id)};
+  const $=function(id){return document.getElementById(id)};
+
+  let saveTimeout = null;
+  function saveState(){
+    clearTimeout(saveTimeout);
+    saveTimeout = setTimeout(function(){
+      store.set(state);
+    }, 300);
+  }
+
   function flash(m){ $('status').textContent=m; setTimeout(function(){ if($('status').textContent===m) $('status').textContent=''; },3500); }
 
-  /* --- FIX: local calendar date, not UTC. ISO slicing rolled the
-     date forward every evening after 8pm Miami time. --- */
+  function checkStorage(){
+    try{
+      let total=0;
+      for(let key in localStorage){
+        if(localStorage.hasOwnProperty(key)){
+          total += localStorage[key].length * 2;
+        }
+      }
+      const MB = total / (1024 * 1024);
+      if(MB > 7){
+        flash('Storage: '+MB.toFixed(1)+'MB used. Export PDF and clear soon.');
+      }
+    }catch(e){}
+  }
+
   function todayLocal(){
-    var d=new Date(), p=function(n){return String(n).padStart(2,'0')};
+    const d=new Date();
+    const p=function(n){return String(n).padStart(2,'0')};
     return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate());
   }
   function autoRef(dateStr){
     return 'SVR-'+String(dateStr||todayLocal()).replace(/-/g,'')+'-A';
   }
-  function planById(id){ for(var i=0;i<PLANS.length;i++) if(PLANS[i].id===id) return PLANS[i]; return null; }
-  function planLabel(p){ var d=p&&planById(p.id); return d?d.label:(p?p.id:''); }
+  function planById(id){ for(let i=0;i<PLANS.length;i++) if(PLANS[i].id===id) return PLANS[i]; return null; }
+  function planLabel(p){ const d=p&&planById(p.id); return d?d.label:(p?p.id:''); }
 
   (async function(){
-    var s=await store.get();
+    const s=await store.get();
     if(s) state=Object.assign(state,s);
     if(!state.date) state.date=todayLocal();
 
-    /* migrate: give any pre-existing item a permanent number */
-    var maxNo=state.seq||0;
+    let maxNo=state.seq||0;
     state.items.forEach(function(it){ if(typeof it.no==='number' && it.no>maxNo) maxNo=it.no; });
     state.items.forEach(function(it){ if(typeof it.no!=='number'){ maxNo++; it.no=maxNo; } });
     state.seq=maxNo;
@@ -313,14 +326,11 @@
     $('fBy').value=state.by||''; $('fRef').value=state.ref||''; $('fTo').value=state.to||'';
     store.set(state);
     render();
+    checkStorage();
   })();
 
   $('mastSub').textContent='Field observation record  /  Build '+BUILD;
 
-  /* ---- offline support ----
-     The worker serves index.html network-first with a short timeout, so a
-     new deploy is picked up on the next online launch with no version bump.
-     Everything else is cache-first, so the app opens with no signal. */
   if('serviceWorker' in navigator){
     window.addEventListener('load',function(){
       navigator.serviceWorker.register('sw.js',{updateViaCache:'none'})
@@ -343,13 +353,13 @@
       state.ref=$('fRef').value; state.to=$('fTo').value;
       if(state.refAuto){ state.ref=autoRef(state.date); $('fRef').value=state.ref; }
       $('mastTitle').textContent=state.proj||'Site Visit Report';
-      store.set(state);
+      saveState();
     });
   });
-$('fProj').addEventListener('change', function(){ buildChips(); });
+  $('fProj').addEventListener('change', function(){ buildChips(); });
   
   function handleFiles(files){
-    var list=Array.prototype.slice.call(files);
+    const list=Array.prototype.slice.call(files);
     if(!list.length) return;
     if(list.length>1) flash('Adding '+list.length+' photos, one at a time');
     pending=list.slice(1);
@@ -359,15 +369,15 @@ $('fProj').addEventListener('change', function(){ buildChips(); });
   $('libIn').addEventListener('change',function(e){ pending=[]; handleFiles(e.target.files); e.target.value=''; });
 
   function readImage(file){
-    var fr=new FileReader();
+    const fr=new FileReader();
     fr.onload=function(){
-      var img=new Image();
+      const img=new Image();
       img.onload=function(){
-        var MAX=1500, w=img.width, h=img.height;
-        if(Math.max(w,h)>MAX){ var k=MAX/Math.max(w,h); w=Math.round(w*k); h=Math.round(h*k); }
-        var c=document.createElement('canvas'); c.width=w; c.height=h;
+        let MAX=1500, w=img.width, h=img.height;
+        if(Math.max(w,h)>MAX){ const k=MAX/Math.max(w,h); w=Math.round(w*k); h=Math.round(h*k); }
+        const c=document.createElement('canvas'); c.width=w; c.height=h;
         c.getContext('2d').drawImage(img,0,0,w,h);
-        openEditor(c.toDataURL('image/jpeg',0.72), file.lastModified||Date.now(), null);
+        openEditor(c.toDataURL('image/jpeg',0.65), file.lastModified||Date.now(), null);
       };
       img.onerror=function(){ flash('That file would not open as an image'); nextPending(); };
       img.src=fr.result;
@@ -377,7 +387,7 @@ $('fProj').addEventListener('change', function(){ buildChips(); });
   function nextPending(){ if(pending.length) readImage(pending.shift()); }
 
   /* ---------------- markup canvas ---------------- */
-  var cv=$('cv'), ctx=cv.getContext('2d');
+  const cv=$('cv'), ctx=cv.getContext('2d');
   function penW(){ return Math.max(2.2, cv.width/165); }
 
   function openEditor(dataUrl,ts,existing){
@@ -386,9 +396,9 @@ $('fProj').addEventListener('change', function(){ buildChips(); });
     marks=[]; cur=null; setMode('pen');
     baseImg=new Image();
     baseImg.onload=function(){
-      var maxW=Math.min(window.innerWidth,560);
-      var maxH=Math.round(window.innerHeight*0.42);
-      var k=Math.min(maxW/baseImg.width, maxH/baseImg.height, 1);
+      const maxW=Math.min(window.innerWidth,560);
+      const maxH=Math.round(window.innerHeight*0.42);
+      const k=Math.min(maxW/baseImg.width, maxH/baseImg.height, 1);
       cv.width=Math.round(baseImg.width*k); cv.height=Math.round(baseImg.height*k);
       redraw();
       $('sheet').style.display='flex';
@@ -409,25 +419,33 @@ $('fProj').addEventListener('change', function(){ buildChips(); });
         if(m.pts.length<2) return;
         c.strokeStyle='#e11d1d'; c.lineWidth=penW()*scale;
         c.beginPath(); c.moveTo(m.pts[0].x*scale,m.pts[0].y*scale);
-        for(var i=1;i<m.pts.length;i++) c.lineTo(m.pts[i].x*scale,m.pts[i].y*scale);
+        for(let i=1;i<m.pts.length;i++) c.lineTo(m.pts[i].x*scale,m.pts[i].y*scale);
         c.stroke();
       }
     });
   }
+
+  let redrawPending = false;
   function redraw(){
-    ctx.clearRect(0,0,cv.width,cv.height);
-    ctx.drawImage(baseImg,0,0,cv.width,cv.height);
-    paint(ctx,1);
+    if(redrawPending) return;
+    redrawPending = true;
+    requestAnimationFrame(function(){
+      ctx.clearRect(0,0,cv.width,cv.height);
+      ctx.drawImage(baseImg,0,0,cv.width,cv.height);
+      paint(ctx,1);
+      redrawPending = false;
+    });
   }
-  function pt(e,el){ var r=el.getBoundingClientRect(); return {x:(e.clientX-r.left)*(el.width/r.width), y:(e.clientY-r.top)*(el.height/r.height)}; }
+
+  function pt(e,el){ const r=el.getBoundingClientRect(); return {x:(e.clientX-r.left)*(el.width/r.width), y:(e.clientY-r.top)*(el.height/r.height)}; }
 
   cv.addEventListener('pointerdown',function(e){
     e.preventDefault(); cv.setPointerCapture(e.pointerId);
-    var p=pt(e,cv);
+    const p=pt(e,cv);
     cur = mode==='rect' ? {type:'rect',x:p.x,y:p.y,x2:p.x,y2:p.y} : {type:'pen',pts:[p]};
   });
   cv.addEventListener('pointermove',function(e){
-    if(!cur) return; e.preventDefault(); var p=pt(e,cv);
+    if(!cur) return; e.preventDefault(); const p=pt(e,cv);
     if(cur.type==='rect'){ cur.x2=p.x; cur.y2=p.y; } else cur.pts.push(p);
     redraw();
   });
@@ -449,31 +467,26 @@ $('fProj').addEventListener('change', function(){ buildChips(); });
 
   $('shSave').addEventListener('click',function(){
     if(!$('eCmt').value.trim()){ $('eCmt').focus(); flash('Add an observation before saving'); return; }
-    var out=document.createElement('canvas');
+    const out=document.createElement('canvas');
     out.width=baseImg.width; out.height=baseImg.height;
-    var o=out.getContext('2d');
+    const o=out.getContext('2d');
     o.drawImage(baseImg,0,0);
     paint(o, baseImg.width/cv.width);
     editing.src=out.toDataURL('image/jpeg',0.72);
+    
     // Create thumbnail for PDF summary table
-      var thumbCanvas = document.createElement('canvas');
-      thumbCanvas.width = 74; thumbCanvas.height = 74;
-      var tCtx = thumbCanvas.getContext('2d');
-      var thumbImg = new Image();
-      thumbImg.onload = function(){
-        tCtx.drawImage(thumbImg, 0, 0, 74, 74);
-        editing.thumb = thumbCanvas.toDataURL('image/jpeg', 0.5);
-};
-thumbImg.src = editing.src;
+    const thumbCanvas = document.createElement('canvas');
+    thumbCanvas.width = 74; thumbCanvas.height = 74;
+    const tCtx = thumbCanvas.getContext('2d');
+    tCtx.drawImage(out, 0, 0, 74, 74);
+    editing.thumb = thumbCanvas.toDataURL('image/jpeg', 0.5);
+    
     editing.zone=$('eZone').value.trim();
     editing.cmt=$('eCmt').value.trim();
     editing.plan=editPlan?{id:editPlan.id,x:editPlan.x,y:editPlan.y}:null;
-    var i=state.items.findIndex(function(x){return x.id===editing.id});
+    const i=state.items.findIndex(function(x){return x.id===editing.id});
     if(i>=0){ state.items[i]=editing; }
     else{
-      /* FIX: permanent item number assigned once, never reused.
-         Deleting leaves a gap on purpose - a number you have
-         already emailed must never point at a different photo. */
       state.seq=(state.seq||0)+1;
       editing.no=state.seq;
       state.items.push(editing);
@@ -482,18 +495,19 @@ thumbImg.src = editing.src;
     buildChips();
     $('sheet').style.display='none'; editing=null; editPlan=null;
     render(); nextPending();
+    checkStorage();
   });
 
   function projZones(){
-    var k=(state.proj||'').trim().toLowerCase();
+    const k=(state.proj||'').trim().toLowerCase();
     return ZONES[k]||[];
   }
   function buildChips(){
-    var box=$('zoneChips'); box.innerHTML='';
-    var seen=projZones().slice();
+    const box=$('zoneChips'); box.innerHTML='';
+    const seen=projZones().slice();
     state.items.forEach(function(it){ if(it.zone && seen.indexOf(it.zone)<0) seen.push(it.zone); });
     seen.forEach(function(z){
-      var b=document.createElement('button'); b.className='chip'; b.textContent=z;
+      const b=document.createElement('button'); b.className='chip'; b.textContent=z;
       if($('eZone').value===z) b.classList.add('on');
       b.onclick=function(){ $('eZone').value=z; buildChips(); };
       box.appendChild(b);
@@ -501,13 +515,13 @@ thumbImg.src = editing.src;
   }
 
   /* ---------------- plan pin sheet ---------------- */
-  var pcv=$('pcv'), pctx=pcv.getContext('2d');
-  var planCache={};
+  const pcv=$('pcv'), pctx=pcv.getContext('2d');
+  const planCache={};
 
   function loadPlan(id,cb){
     if(Object.prototype.hasOwnProperty.call(planCache,id)) return cb(planCache[id]);
-    var d=planById(id); if(!d){ planCache[id]=null; return cb(null); }
-    var im=new Image();
+    const d=planById(id); if(!d){ planCache[id]=null; return cb(null); }
+    const im=new Image();
     im.onload=function(){ planCache[id]=im; cb(im); };
     im.onerror=function(){ planCache[id]=null; cb(null); };
     im.src=PLAN_DIR+d.file;
@@ -535,9 +549,9 @@ thumbImg.src = editing.src;
 
   function paintPlanCanvas(){
     if(!plImg){ pcv.width=10; pcv.height=10; return; }
-    var maxW=Math.min(window.innerWidth,560);
-    var maxH=Math.round(window.innerHeight*0.5);
-    var k=Math.min(maxW/plImg.width, maxH/plImg.height);
+    const maxW=Math.min(window.innerWidth,560);
+    const maxH=Math.round(window.innerHeight*0.5);
+    const k=Math.min(maxW/plImg.width, maxH/plImg.height);
     pcv.width=Math.round(plImg.width*k); pcv.height=Math.round(plImg.height*k);
     pctx.clearRect(0,0,pcv.width,pcv.height);
     pctx.drawImage(plImg,0,0,pcv.width,pcv.height);
@@ -547,9 +561,9 @@ thumbImg.src = editing.src;
   }
 
   function buildPlanChips(){
-    var box=$('plChips'); box.innerHTML='';
+    const box=$('plChips'); box.innerHTML='';
     PLANS.forEach(function(p){
-      var b=document.createElement('button'); b.className='chip'; b.textContent=p.label;
+      const b=document.createElement('button'); b.className='chip'; b.textContent=p.label;
       if(p.id===plId) b.classList.add('on');
       if(planCache[p.id]===null) b.classList.add('miss');
       b.onclick=function(){ selectPlan(p.id); };
@@ -571,7 +585,7 @@ thumbImg.src = editing.src;
   pcv.addEventListener('pointerdown',function(e){
     if(!plImg) return;
     e.preventDefault();
-    var p=pt(e,pcv);
+    const p=pt(e,pcv);
     plDraft={id:plId, x:Math.min(1,Math.max(0,p.x/pcv.width)), y:Math.min(1,Math.max(0,p.y/pcv.height))};
     paintPlanCanvas();
   });
@@ -596,32 +610,32 @@ thumbImg.src = editing.src;
 
   /* ---------------- list ---------------- */
   function ordered(){
-    var canon=projZones().slice(), zones=canon.slice(), out=[];
-    state.items.forEach(function(it){ var z=it.zone||'Unassigned'; if(zones.indexOf(z)<0) zones.push(z); });
+    const canon=projZones().slice(), zones=canon.slice(), out=[];
+    state.items.forEach(function(it){ const z=it.zone||'Unassigned'; if(zones.indexOf(z)<0) zones.push(z); });
     zones.forEach(function(z){ state.items.forEach(function(it){ if((it.zone||'Unassigned')===z) out.push(it); }); });
     return out;
   }
-  function fmt(ts){ var d=new Date(ts); return d.toLocaleString([], {month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}); }
+  function fmt(ts){ const d=new Date(ts); return d.toLocaleString([], {month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}); }
   function esc(s){ return (s||'').replace(/[&<>]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;'}[c]}); }
   function num(it){ return String(it.no==null?'?':it.no).padStart(2,'0'); }
 
   function render(){
     $('tallyNum').textContent=state.items.length;
     $('mastTitle').textContent=state.proj||'Site Visit Report';
-    var e=$('entries');
+    const e=$('entries');
     if(!state.items.length){ e.innerHTML='<div class="empty"><strong>No items yet</strong>Take a photo, mark it up, write the note. Do it standing in front of the issue.</div>'; return; }
     e.innerHTML='';
-    var list=ordered(), lastZone=null;
+    const list=ordered(); let lastZone=null;
     list.forEach(function(it){
-      var z=it.zone||'Unassigned';
-      if(z!==lastZone){ var band=document.createElement('div'); band.className='zoneband'; band.textContent=z; e.appendChild(band); lastZone=z; }
-      var d=document.createElement('div'); d.className='row';
-      var n=document.createElement('div'); n.className='idx'; n.textContent=num(it);
-      var im=document.createElement('img'); im.src=it.src; im.onclick=function(){ openEditor(it.src,it.ts,it); };
-      var b=document.createElement('div'); b.className='body';
-      var pinHtml=it.plan?'<div><span class="pin">'+esc(planLabel(it.plan))+'</span></div>':'';
+      const z=it.zone||'Unassigned';
+      if(z!==lastZone){ const band=document.createElement('div'); band.className='zoneband'; band.textContent=z; e.appendChild(band); lastZone=z; }
+      const d=document.createElement('div'); d.className='row';
+      const n=document.createElement('div'); n.className='idx'; n.textContent=num(it);
+      const im=document.createElement('img'); im.src=it.src; im.onclick=function(){ openEditor(it.src,it.ts,it); };
+      const b=document.createElement('div'); b.className='body';
+      const pinHtml=it.plan?'<div><span class="pin">'+esc(planLabel(it.plan))+'</span></div>':'';
       b.innerHTML='<div class="cmt">'+esc(it.cmt)+'</div>'+pinHtml+'<div class="time">'+fmt(it.ts)+'</div>';
-      var k=document.createElement('button'); k.className='kill'; k.textContent='Remove';
+      const k=document.createElement('button'); k.className='kill'; k.textContent='Remove';
       k.onclick=function(){
         if(!confirm('Remove item '+num(it)+'? The number stays retired.')) return;
         state.items=state.items.filter(function(x){return x.id!==it.id}); store.set(state); render();
@@ -645,23 +659,22 @@ thumbImg.src = editing.src;
     if(!window.jspdf){ flash('PDF library missing - check jspdf.umd.min.js is in the repo'); return; }
     if(!state.items.length){ flash('Nothing to export yet'); return; }
     flash('Building PDF...');
-    var ids=[];
+    const ids=[];
     state.items.forEach(function(it){ if(it.plan && ids.indexOf(it.plan.id)<0) ids.push(it.plan.id); });
-    var left=ids.length;
+    let left=ids.length;
     if(!left) return setTimeout(buildPdf,60);
     ids.forEach(function(id){ loadPlan(id,function(){ if(--left===0) setTimeout(buildPdf,60); }); });
   });
 
-  /* keyplan raster with the pin burned in, ready for jsPDF */
   function keyplanUrl(it){
     if(!it.plan) return null;
-    var im=planCache[it.plan.id];
+    const im=planCache[it.plan.id];
     if(!im) return null;
     try{
-      var MAXP=900, k=Math.min(1, MAXP/Math.max(im.width,im.height));
-      var c=document.createElement('canvas');
+      const MAXP=900, k=Math.min(1, MAXP/Math.max(im.width,im.height));
+      const c=document.createElement('canvas');
       c.width=Math.round(im.width*k); c.height=Math.round(im.height*k);
-      var x=c.getContext('2d');
+      const x=c.getContext('2d');
       x.fillStyle='#fff'; x.fillRect(0,0,c.width,c.height);
       x.drawImage(im,0,0,c.width,c.height);
       drawPin(x, it.plan.x*c.width, it.plan.y*c.height, Math.max(11,c.width/26), it.no);
@@ -670,13 +683,13 @@ thumbImg.src = editing.src;
   }
 
   function buildPdf(){
-    var jsPDF=window.jspdf.jsPDF;
-    var doc=new jsPDF({unit:'pt',format:'letter'});
-    var W=612, H=792, M=54;
-    var proj=state.proj||'Site Visit Report';
-    var list=ordered();
-    var INK=[20,32,43], MARK=[123,167,175], MID=[109,118,128], HAIR=[214,213,208];
-    var FOOT=64;
+    const jsPDF=window.jspdf.jsPDF;
+    const doc=new jsPDF({unit:'pt',format:'letter'});
+    const W=612, H=792, M=54;
+    const proj=state.proj||'Site Visit Report';
+    const list=ordered();
+    const INK=[20,32,43], MARK=[123,167,175], MID=[109,118,128], HAIR=[214,213,208];
+    const FOOT=64;
 
     function brandbar(full){
       doc.setFillColor(INK[0],INK[1],INK[2]);
@@ -692,19 +705,19 @@ thumbImg.src = editing.src;
         doc.text('FIELD OBSERVATION RECORD', W-M, 78, {align:'right', charSpace:1.6});
       }else{
         doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(150,165,172);
-        var t=proj+(state.ref?'   /   '+state.ref:'');
+        const t=proj+(state.ref?'   /   '+state.ref:'');
         doc.text(t, W-M, 31.5, {align:'right'});
       }
     }
 
     function metaBlock(y){
-      var cols=[
+      const cols=[
         ['PROJECT', proj],
         ['VISIT DATE', state.date||''],
         ['OBSERVED BY', state.by||''],
         ['REPORT NO.', state.ref||'-']
       ];
-      var cw=(W-2*M)/4;
+      const cw=(W-2*M)/4;
       cols.forEach(function(c,i){
         doc.setFont('helvetica','bold'); doc.setFontSize(6.8); doc.setTextColor(MID[0],MID[1],MID[2]);
         doc.text(c[0], M+i*cw, y, {charSpace:1.1});
@@ -723,11 +736,10 @@ thumbImg.src = editing.src;
       return y+18;
     }
 
-    var y;
+    let y;
     brandbar(true);
     y=metaBlock(122);
 
-    /* ---- summary table, grouped by zone, rows sized to content ---- */
     function tableHead(yy){
       doc.setFillColor(236,235,231); doc.rect(M,yy,W-2*M,18,'F');
       doc.setFont('helvetica','bold'); doc.setFontSize(6.8); doc.setTextColor(MID[0],MID[1],MID[2]);
@@ -738,14 +750,15 @@ thumbImg.src = editing.src;
     }
     y=tableHead(y);
 
-    var TH=62, TW=78, CX=M+124, LH=11.5, lastZone=null;
+    const TH=62, TW=78, CX=M+124, LH=11.5;
+    let lastZone=null;
     list.forEach(function(it){
-      var z=it.zone||'Unassigned';
+      const z=it.zone||'Unassigned';
       doc.setFont('helvetica','normal'); doc.setFontSize(9.5);
-      var lines=doc.splitTextToSize(it.cmt||'', W-M-CX);
-      /* FIX: row grows with the text instead of overrunning the next row */
-      var textHeight = Math.max(TH, lines.length * LH + 4);
-      var rowH = textHeight + 20;      var need=(z!==lastZone);
+      const lines=doc.splitTextToSize(it.cmt||'', W-M-CX);
+      const textHeight = Math.max(TH, lines.length * LH + 4);
+      const rowH = textHeight + 20;
+      let need=(z!==lastZone);
       if(y+rowH+(need?21:0) > H-FOOT){
         doc.addPage(); brandbar(false); y=78; lastZone=null; need=true;
       }
@@ -756,25 +769,25 @@ thumbImg.src = editing.src;
         y+=21; lastZone=z;
       }
       doc.setDrawColor(HAIR[0],HAIR[1],HAIR[2]); doc.line(M,y,W-M,y);
-      var ty=y+11;
+      const ty=y+11;
       doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(INK[0],INK[1],INK[2]);
       doc.text(String(it.no==null?'-':it.no),M+8,ty+8);
-      var imgSrc = it.thumb || it.src;
-      try{ doc.addImage(imgSrc,'JPEG',M+30,ty,TW,TH); }catch(e){ console.log('Image failed for item', it.no, e.message); }
+      const imgSrc = it.thumb || it.src;
+      try{ doc.addImage(imgSrc, 'JPEG', M+30, ty, TW, TH); }catch(e){ console.log('Image failed for item', it.no, e.message); }
       doc.setFont('helvetica','normal'); doc.setFontSize(9.5); doc.setTextColor(35,45,55);
       doc.text(lines,CX,ty+9,{lineHeightFactor:1.21});
       doc.setFontSize(7); doc.setTextColor(160,168,175);
-      var meta=fmt(it.ts)+(it.plan?'    PLAN '+planLabel(it.plan):'');
+      const meta=fmt(it.ts)+(it.plan?'    PLAN '+planLabel(it.plan):'');
       doc.text(meta,CX,ty+Math.max(TH,lines.length*LH+4)+1);
       y+=rowH;
     });
 
-    /* ---- appendix, two per page, full text, optional keyplan ---- */
-    var TOP=78, SLOT=(H-TOP-FOOT)/2;
+    /* ---- appendix ---- */
+    const TOP=78, SLOT=(H-TOP-FOOT)/2;
     list.forEach(function(it,i){
-      var slot=i%2;
+      const slot=i%2;
       if(slot===0){ doc.addPage(); brandbar(false); }
-      var top=TOP+slot*SLOT;
+      const top=TOP+slot*SLOT;
       if(slot===1){ doc.setDrawColor(HAIR[0],HAIR[1],HAIR[2]); doc.line(M,top-12,W-M,top-12); }
 
       doc.setFont('helvetica','bold'); doc.setFontSize(7); doc.setTextColor(93,137,145);
@@ -784,10 +797,9 @@ thumbImg.src = editing.src;
       doc.setFont('helvetica','normal'); doc.setFontSize(7); doc.setTextColor(160,168,175);
       doc.text(fmt(it.ts)+(it.plan?'   /   PLAN '+planLabel(it.plan):''),W-M,top+2,{align:'right'});
 
-      /* FIX: caption no longer hard-clipped at 2 lines */
       doc.setFont('helvetica','normal'); doc.setFontSize(9.5); doc.setTextColor(35,45,55);
-      var lines=doc.splitTextToSize(it.cmt||'', W-2*M);
-      var MAXL=5, clipped=false;
+      const lines=doc.splitTextToSize(it.cmt||'', W-2*M);
+      const MAXL=5; let clipped=false;
       if(lines.length>MAXL){ lines=lines.slice(0,MAXL); clipped=true; }
       doc.text(lines,M,top+18,{lineHeightFactor:1.21});
       if(clipped){
@@ -795,20 +807,20 @@ thumbImg.src = editing.src;
         doc.text('(observation continues in the summary table)',M,top+18+lines.length*11.5+2);
       }
 
-      var imgTop=top+18+lines.length*11.5+(clipped?12:6);
-      var availH=(top+SLOT-16)-imgTop;
-      var kp=keyplanUrl(it);
-      var KPW=kp?132:0, GAP=kp?14:0;
-      var availW=W-2*M-KPW-GAP;
+      const imgTop=top+18+lines.length*11.5+(clipped?12:6);
+      const availH=(top+SLOT-16)-imgTop;
+      const kp=keyplanUrl(it);
+      const KPW=kp?132:0, GAP=kp?14:0;
+      const availW=W-2*M-KPW-GAP;
 
-      var props; try{ props=doc.getImageProperties(it.src); }catch(e){ props={width:4,height:3}; }
-      var k=Math.min(availW/props.width, availH/props.height);
-      var w=props.width*k, h=props.height*k;
+      let props; try{ props=doc.getImageProperties(it.src); }catch(e){ props={width:4,height:3}; }
+      const k=Math.min(availW/props.width, availH/props.height);
+      const w=props.width*k, h=props.height*k;
       try{ doc.addImage(it.src,'JPEG',M+(availW-w)/2,imgTop,w,h); }catch(e){}
 
       if(kp){
-        var kk=Math.min(KPW/kp.w, availH/kp.h);
-        var kw=kp.w*kk, kh=kp.h*kk, kx=W-M-KPW+(KPW-kw)/2;
+        const kk=Math.min(KPW/kp.w, availH/kp.h);
+        const kw=kp.w*kk, kh=kp.h*kk, kx=W-M-KPW+(KPW-kw)/2;
         doc.setFillColor(255,255,255); doc.rect(kx-3,imgTop-3,kw+6,kh+6,'F');
         doc.setDrawColor(HAIR[0],HAIR[1],HAIR[2]); doc.rect(kx-3,imgTop-3,kw+6,kh+6);
         try{ doc.addImage(kp.url,'JPEG',kx,imgTop,kw,kh); }catch(e){}
@@ -818,8 +830,8 @@ thumbImg.src = editing.src;
     });
 
     /* ---- footers ---- */
-    var tot=doc.getNumberOfPages();
-    for(var p=1;p<=tot;p++){
+    const tot=doc.getNumberOfPages();
+    for(let p=1;p<=tot;p++){
       doc.setPage(p);
       doc.setDrawColor(HAIR[0],HAIR[1],HAIR[2]); doc.line(M,H-50,W-M,H-50);
       doc.setFont('helvetica','normal'); doc.setFontSize(6.5); doc.setTextColor(150,158,166);
@@ -828,7 +840,7 @@ thumbImg.src = editing.src;
       doc.text('Page '+p+' of '+tot,W-M,H-29,{align:'right'});
     }
 
-    var nm=[(state.ref||'SVR'),proj,(state.date||'')].join('-').replace(/[^a-z0-9-]+/gi,'-').replace(/-+/g,'-').toLowerCase();
+    const nm=[(state.ref||'SVR'),proj,(state.date||'')].join('-').replace(/[^a-z0-9-]+/gi,'-').replace(/-+/g,'-').toLowerCase();
     doc.save(nm+'.pdf');
     flash('PDF exported');
   }
