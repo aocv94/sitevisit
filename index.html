@@ -974,7 +974,7 @@
       doc.text(lines,CX,ty+9,{lineHeightFactor:1.21});
       doc.setFontSize(7); doc.setTextColor(160,168,175);
       const meta=fmt(it.ts)+(it.plan?'    PLAN '+planLabel(it.plan):'');
-      doc.text(meta,CX,ty+Math.max(TH,lines.length*LH+4)+1);
+      doc.text(meta,CX,ty+textHeight+1);
       y+=rowH;
     });
 
