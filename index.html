@@ -335,6 +335,7 @@
 
   let state={proj:'',date:'',by:'',ref:'',refAuto:true,to:'',seq:0,items:[]};
   let marks=[], cur=null, baseImg=null, editing=null, mode='pen', pending=[];
+  let origSrc=null; // pristine, unrotated image for the current editing session
   let editPlan=null;
   let plDraft=null, plImg=null, plId=null;
   let rotation=0; // Track rotation in degrees
@@ -498,11 +499,7 @@
     img.src=dataUrl;
   }
 
-  function openEditor(dataUrl,ts,existing){
-    rotation=0;
-    editing = existing || {id:Date.now()+'_'+Math.random().toString(36).slice(2), src:dataUrl, ts:ts, zone:'', cmt:'', plan:null, no:null};
-    editPlan = editing.plan ? {id:editing.plan.id,x:editing.plan.x,y:editing.plan.y} : null;
-    marks=[]; cur=null; setMode('pen');
+  function loadBaseImg(src,cb){
     baseImg=new Image();
     baseImg.onload=function(){
       const maxW=Math.min(window.innerWidth*1.5,840);
@@ -510,11 +507,22 @@
       const k=Math.min(maxW/baseImg.width, maxH/baseImg.height, 1);
       cv.width=Math.round(baseImg.width*k); cv.height=Math.round(baseImg.height*k);
       redraw();
+      if(cb) cb();
+    };
+    baseImg.src=src;
+  }
+
+  function openEditor(dataUrl,ts,existing){
+    rotation=0;
+    editing = existing || {id:Date.now()+'_'+Math.random().toString(36).slice(2), src:dataUrl, ts:ts, zone:'', cmt:'', plan:null, no:null};
+    origSrc = editing.src;
+    editPlan = editing.plan ? {id:editing.plan.id,x:editing.plan.x,y:editing.plan.y} : null;
+    marks=[]; cur=null; setMode('pen');
+    loadBaseImg(editing.src,function(){
       $('sheet').style.display='flex';
       $('eZone').value=editing.zone||''; $('eCmt').value=editing.cmt||'';
       buildChips(); updateLocBtn();
-    };
-    baseImg.src=editing.src;
+    });
   }
 
   function paint(c,scale){
@@ -574,12 +582,19 @@
   $('tClear').addEventListener('click',function(){ marks=[]; redraw(); });
   $('shCancel').addEventListener('click',function(){ $('sheet').style.display='none'; editing=null; nextPending(); });
 
-  // Rotate button
+  // Rotate button - always rotate the pristine origSrc by the cumulative
+  // angle (not the already-rotated src) so repeated presses don't
+  // over-rotate. Marks drawn before rotating are tied to the old canvas
+  // orientation, so they're cleared rather than repainted crooked.
   $('shRotate').addEventListener('click',function(){
+    if(!origSrc) return;
     rotation = (rotation + 90) % 360;
-    rotateImage(editing.src, rotation, function(rotatedDataUrl){
+    const hadMarks = marks.length>0;
+    marks=[]; cur=null;
+    rotateImage(origSrc, rotation, function(rotatedDataUrl){
       editing.src = rotatedDataUrl;
-      baseImg.src = rotatedDataUrl;
+      loadBaseImg(rotatedDataUrl);
+      if(hadMarks) flash('Rotated - marks were cleared, re-mark the photo');
     });
   });
 
@@ -668,6 +683,19 @@
     c.restore();
   }
 
+  // Same center-based transform used to draw the plan image, so pin
+  // display and tap-to-coordinate math agree with it at any zoom/pan.
+  function planImgToScreen(ix,iy){
+    const w=pcv.width, h=pcv.height;
+    return { x: w/2 + planScale*(ix - w/2 + planOffsetX),
+             y: h/2 + planScale*(iy - h/2 + planOffsetY) };
+  }
+  function planScreenToImg(sx,sy){
+    const w=pcv.width, h=pcv.height;
+    return { x: (sx - w/2)/planScale + w/2 - planOffsetX,
+             y: (sy - h/2)/planScale + h/2 - planOffsetY };
+  }
+
   function paintPlanCanvas(){
     if(!plImg){ pcv.width=10; pcv.height=10; return; }
     const maxW=Math.min(window.innerWidth*1.5,840);
@@ -683,10 +711,8 @@
     pctx.drawImage(plImg,0,0,pcv.width,pcv.height);
     pctx.restore();
     if(plDraft && plDraft.id===plId){
-      // Pin position relative to zoom/pan
-      const px = plDraft.x * pcv.width * planScale + planOffsetX;
-      const py = plDraft.y * pcv.height * planScale + planOffsetY;
-      drawPin(pctx, px, py, Math.max(10,pcv.width/38 * planScale), null);
+      const pos = planImgToScreen(plDraft.x * pcv.width, plDraft.y * pcv.height);
+      drawPin(pctx, pos.x, pos.y, Math.max(10,pcv.width/38 * planScale), null);
     }
   }
 
@@ -771,10 +797,8 @@
     if(!plImg) return;
     e.preventDefault();
     const p=pt(e,pcv);
-    // Adjust for zoom/pan
-    const adjX = (p.x - planOffsetX) / planScale;
-    const adjY = (p.y - planOffsetY) / planScale;
-    plDraft={id:plId, x:Math.min(1,Math.max(0,adjX/pcv.width)), y:Math.min(1,Math.max(0,adjY/pcv.height))};
+    const img = planScreenToImg(p.x, p.y);
+    plDraft={id:plId, x:Math.min(1,Math.max(0,img.x/pcv.width)), y:Math.min(1,Math.max(0,img.y/pcv.height))};
     paintPlanCanvas();
   });
 
@@ -854,7 +878,7 @@
     ids.forEach(function(id){ loadPlan(id,function(){ if(--left===0) setTimeout(sharePdf,60); }); });
   });
 
-  function sharePdf(){
+  function renderReport(){
     const jsPDF=window.jspdf.jsPDF;
     const doc=new jsPDF({unit:'pt',format:'letter'});
     const W=612, H=792, M=54;
@@ -969,7 +993,7 @@
       doc.text(fmt(it.ts)+(it.plan?'   /   PLAN '+planLabel(it.plan):''),W-M,top+2,{align:'right'});
 
       doc.setFont('helvetica','normal'); doc.setFontSize(9.5); doc.setTextColor(35,45,55);
-      const lines=doc.splitTextToSize(it.cmt||'', W-2*M);
+      let lines=doc.splitTextToSize(it.cmt||'', W-2*M);
       const MAXL=5; let clipped=false;
       if(lines.length>MAXL){ lines=lines.slice(0,MAXL); clipped=true; }
       doc.text(lines,M,top+18,{lineHeightFactor:1.21});
@@ -1010,6 +1034,17 @@
       doc.text('Page '+p+' of '+tot,W-M,H-29,{align:'right'});
     }
 
+    return doc;
+  }
+
+  function buildPdf(){
+    const doc=renderReport();
+    doc.save(getFilename());
+    flash('PDF exported');
+  }
+
+  function sharePdf(){
+    const doc=renderReport();
     const pdfBlob = doc.output('blob');
     const filename = getFilename();
 
@@ -1056,167 +1091,6 @@
     const ref = (state.ref || 'SVR').replace(/[^a-z0-9]/gi,'_');
     const date = state.date || todayLocal();
     return proj + '_' + ref + '_' + date + '.pdf';
-  }
-
-  function buildPdf(){
-    const jsPDF=window.jspdf.jsPDF;
-    const doc=new jsPDF({unit:'pt',format:'letter'});
-    const W=612, H=792, M=54;
-    const proj=state.proj||'Site Visit Report';
-    const list=ordered();
-    const INK=[20,32,43], MARK=[123,167,175], MID=[109,118,128], HAIR=[214,213,208];
-    const FOOT=64;
-
-    function brandbar(full){
-      doc.setFillColor(INK[0],INK[1],INK[2]);
-      doc.rect(0,0,W, full?96:54,'F');
-      if(logoPng){ try{ doc.addImage(logoPng,'PNG',M, full?30:18, 19, 17.5); }catch(e){} }
-      doc.setFont('helvetica','bold'); doc.setFontSize(9.5);
-      doc.setTextColor(MARK[0],MARK[1],MARK[2]);
-      doc.text('CONSTELLATION', M+28, full?43.5:31.5, {charSpace:3.2});
-      if(full){
-        doc.setFont('helvetica','bold'); doc.setFontSize(17); doc.setTextColor(245,244,241);
-        doc.text('Site Visit Report', M, 78);
-        doc.setFont('helvetica','normal'); doc.setFontSize(8.5); doc.setTextColor(MARK[0],MARK[1],MARK[2]);
-        doc.text('FIELD OBSERVATION RECORD', W-M, 78, {align:'right', charSpace:1.6});
-      }else{
-        doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(150,165,172);
-        const t=proj+(state.ref?'   /   '+state.ref:'');
-        doc.text(t, W-M, 31.5, {align:'right'});
-      }
-    }
-
-    function metaBlock(y){
-      const cols=[
-        ['PROJECT', proj],
-        ['VISIT DATE', state.date||''],
-        ['OBSERVED BY', state.by||''],
-        ['REPORT NO.', state.ref||'-']
-      ];
-      const cw=(W-2*M)/4;
-      cols.forEach(function(c,i){
-        doc.setFont('helvetica','bold'); doc.setFontSize(6.8); doc.setTextColor(MID[0],MID[1],MID[2]);
-        doc.text(c[0], M+i*cw, y, {charSpace:1.1});
-        doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.setTextColor(INK[0],INK[1],INK[2]);
-        doc.text(doc.splitTextToSize(c[1]||'-', cw-10).slice(0,1), M+i*cw, y+13);
-      });
-      y+=26;
-      if(state.to){
-        doc.setFont('helvetica','bold'); doc.setFontSize(6.8); doc.setTextColor(MID[0],MID[1],MID[2]);
-        doc.text('ISSUED TO', M, y, {charSpace:1.1});
-        doc.setFont('helvetica','normal'); doc.setFontSize(10); doc.setTextColor(INK[0],INK[1],INK[2]);
-        doc.text(doc.splitTextToSize(state.to, W-2*M).slice(0,1), M, y+13);
-        y+=26;
-      }
-      doc.setDrawColor(HAIR[0],HAIR[1],HAIR[2]); doc.line(M,y,W-M,y);
-      return y+18;
-    }
-
-    let y;
-    brandbar(true);
-    y=metaBlock(122);
-
-    function tableHead(yy){
-      doc.setFillColor(236,235,231); doc.rect(M,yy,W-2*M,18,'F');
-      doc.setFont('helvetica','bold'); doc.setFontSize(6.8); doc.setTextColor(MID[0],MID[1],MID[2]);
-      doc.text('#',M+8,yy+12,{charSpace:1.1});
-      doc.text('PHOTO',M+30,yy+12,{charSpace:1.1});
-      doc.text('OBSERVATION',M+124,yy+12,{charSpace:1.1});
-      return yy+18;
-    }
-    y=tableHead(y);
-
-    const TH=62, TW=78, CX=M+124, LH=11.5;
-    let lastZone=null;
-    list.forEach(function(it){
-      const z=it.zone||'Unassigned';
-      doc.setFont('helvetica','normal'); doc.setFontSize(9.5);
-      const lines=doc.splitTextToSize(it.cmt||'', W-M-CX);
-      const textHeight = Math.max(TH, lines.length * LH + 4);
-      const rowH = textHeight + 20;
-      let need=(z!==lastZone);
-      if(y+rowH+(need?21:0) > H-FOOT){
-        doc.addPage(); brandbar(false); y=78; lastZone=null; need=true;
-      }
-      if(need){
-        doc.setFillColor(INK[0],INK[1],INK[2]); doc.rect(M,y,W-2*M,16,'F');
-        doc.setFont('helvetica','bold'); doc.setFontSize(7); doc.setTextColor(MARK[0],MARK[1],MARK[2]);
-        doc.text(z.toUpperCase(),M+8,y+11,{charSpace:1.8});
-        y+=21; lastZone=z;
-      }
-      doc.setDrawColor(HAIR[0],HAIR[1],HAIR[2]); doc.line(M,y,W-M,y);
-      const ty=y+11;
-      doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(INK[0],INK[1],INK[2]);
-      doc.text(String(it.no==null?'-':it.no),M+8,ty+8);
-      const imgSrc = it.thumb || it.src;
-      try{ doc.addImage(imgSrc, 'JPEG', M+30, ty, TW, TH); }catch(e){ console.log('Image failed for item', it.no, e.message); }
-      doc.setFont('helvetica','normal'); doc.setFontSize(9.5); doc.setTextColor(35,45,55);
-      doc.text(lines,CX,ty+9,{lineHeightFactor:1.21});
-      doc.setFontSize(7); doc.setTextColor(160,168,175);
-      const meta=fmt(it.ts)+(it.plan?'    PLAN '+planLabel(it.plan):'');
-      doc.text(meta,CX,ty+Math.max(TH,lines.length*LH+4)+1);
-      y+=rowH;
-    });
-
-    const TOP=78, SLOT=(H-TOP-FOOT)/2;
-    list.forEach(function(it,i){
-      const slot=i%2;
-      if(slot===0){ doc.addPage(); brandbar(false); }
-      const top=TOP+slot*SLOT;
-      if(slot===1){ doc.setDrawColor(HAIR[0],HAIR[1],HAIR[2]); doc.line(M,top-12,W-M,top-12); }
-
-      doc.setFont('helvetica','bold'); doc.setFontSize(7); doc.setTextColor(93,137,145);
-      doc.text('ITEM '+(it.no==null?'-':it.no),M,top+2,{charSpace:1.4});
-      doc.setFont('helvetica','bold'); doc.setFontSize(10.5); doc.setTextColor(INK[0],INK[1],INK[2]);
-      doc.text(it.zone||'Unassigned',M+52,top+3);
-      doc.setFont('helvetica','normal'); doc.setFontSize(7); doc.setTextColor(160,168,175);
-      doc.text(fmt(it.ts)+(it.plan?'   /   PLAN '+planLabel(it.plan):''),W-M,top+2,{align:'right'});
-
-      doc.setFont('helvetica','normal'); doc.setFontSize(9.5); doc.setTextColor(35,45,55);
-      const lines=doc.splitTextToSize(it.cmt||'', W-2*M);
-      const MAXL=5; let clipped=false;
-      if(lines.length>MAXL){ lines=lines.slice(0,MAXL); clipped=true; }
-      doc.text(lines,M,top+18,{lineHeightFactor:1.21});
-      if(clipped){
-        doc.setFontSize(6.5); doc.setTextColor(160,168,175);
-        doc.text('(observation continues in the summary table)',M,top+18+lines.length*11.5+2);
-      }
-
-      const imgTop=top+18+lines.length*11.5+(clipped?12:6);
-      const availH=(top+SLOT-16)-imgTop;
-      const kp=keyplanUrl(it);
-      const KPW=kp?132:0, GAP=kp?14:0;
-      const availW=W-2*M-KPW-GAP;
-
-      let props; try{ props=doc.getImageProperties(it.src); }catch(e){ props={width:4,height:3}; }
-      const k=Math.min(availW/props.width, availH/props.height);
-      const w=props.width*k, h=props.height*k;
-      try{ doc.addImage(it.src,'JPEG',M+(availW-w)/2,imgTop,w,h); }catch(e){}
-
-      if(kp){
-        const kk=Math.min(KPW/kp.w, availH/kp.h);
-        const kw=kp.w*kk, kh=kp.h*kk, kx=W-M-KPW+(KPW-kw)/2;
-        doc.setFillColor(255,255,255); doc.rect(kx-3,imgTop-3,kw+6,kh+6,'F');
-        doc.setDrawColor(HAIR[0],HAIR[1],HAIR[2]); doc.rect(kx-3,imgTop-3,kw+6,kh+6);
-        try{ doc.addImage(kp.url,'JPEG',kx,imgTop,kw,kh); }catch(e){}
-        doc.setFont('helvetica','bold'); doc.setFontSize(6.2); doc.setTextColor(MID[0],MID[1],MID[2]);
-        doc.text('KEY PLAN - '+planLabel(it.plan).toUpperCase(), kx, imgTop+kh+11, {charSpace:1});
-      }
-    });
-
-    const tot=doc.getNumberOfPages();
-    for(let p=1;p<=tot;p++){
-      doc.setPage(p);
-      doc.setDrawColor(HAIR[0],HAIR[1],HAIR[2]); doc.line(M,H-50,W-M,H-50);
-      doc.setFont('helvetica','normal'); doc.setFontSize(6.5); doc.setTextColor(150,158,166);
-      doc.text('Observations recorded during a general site visit. Not an exhaustive inspection and not a directive to change contract scope, schedule, or cost.',M,H-38);
-      doc.text('Neither the inclusion nor the omission of an item constitutes approval, acceptance, or rejection of the Work.',M,H-29);
-      doc.text('Page '+p+' of '+tot,W-M,H-29,{align:'right'});
-    }
-
-    const filename = getFilename();
-    doc.save(filename);
-    flash('PDF exported');
   }
 
   /* ---------------- PDF export ---------------- */
