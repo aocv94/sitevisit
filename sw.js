@@ -8,6 +8,33 @@
 
    Only bump VERSION when you want to purge the cache (e.g. you replaced
    the floor plan images and the old ones are still showing).
+
+   ---------------------------------------------------------------------
+   The other half of this policy lives in vercel.json, which sets the HTTP
+   Cache-Control headers this worker sits on top of. JSON has no comments
+   and Vercel rejects unknown keys, so the reasoning is documented here:
+
+     /sw.js                    max-age=0, must-revalidate
+       Never cached. This is the ONE mechanism by which a new deploy
+       reaches a phone that already has the PWA installed. Cache this and
+       you are stuck on the old version. Service-Worker-Allowed: / gives
+       the worker root scope.
+
+     /(index.html)?            max-age=0, must-revalidate
+     /manifest.json            max-age=0, must-revalidate
+       Always revalidate. This is the floor that the network-first +
+       2.5s timeout above is built on.
+
+     /plans/(.*)               max-age=0, must-revalidate
+     /jspdf.umd.min.js         max-age=0, must-revalidate
+       Revalidate rather than immutable, because these are replaced under
+       the SAME filename (101.jpg stays 101.jpg). A long cache would leave
+       you showing the old floor plan - the exact problem described above.
+       Served cache-first here, so offline is still instant.
+
+     /(icon-192|icon-512).png  max-age=31536000, immutable
+       One year, no revalidation. Safe because if the icons change, the
+       filename changes.
 */
 var VERSION = 'svr-v1';
 var TIMEOUT = 2500;
