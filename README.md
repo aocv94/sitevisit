@@ -170,6 +170,9 @@ sirve igual, pero replicar esas cabeceras no es opcional.
   primer export offline funciona.
 - **Las marcas y el encuadre del plano viven en `useRef`, no en estado de React.** Se
   actualizan a ritmo de dedo y pasar cada punto por `setState` tiraría el frame rate.
+- **El pin se confirma al levantar el dedo, no al tocar.** Mientras el gesto sigue vivo no se
+  sabe si es un toque o el principio de un pinch; si llega un segundo dedo, el pin candidato se
+  descarta. Sin esto, cada intento de hacer zoom dejaba un pin suelto en el plano.
 
 ---
 
@@ -212,11 +215,9 @@ organización se resuelve sobrescribiendo variables en `:root`.
   reporte.
 - **`navigator.share` con archivos** no existe en todos los navegadores; hay caída automática
   a descarga directa.
-- **La miniatura de la tabla resumen se dibuja forzada a 150×150**, así que las fotos que no
-  sean cuadradas salen deformadas en esa columna. Las fotos grandes de las fichas de detalle
-  sí conservan su proporción. Se conserva a propósito para no alterar el aspecto de los PDF ya
-  emitidos; el arreglo es recortar tipo `cover` en `makeThumbnail`.
-- **Durante un pinch-zoom sobre el plano también se dispara `pointerdown`**, así que un gesto
-  de zoom puede dejar un pin suelto. Se quita con “Remove pin”.
+- **La miniatura de la tabla resumen recorta al centro.** Una foto apaisada pierde los
+  laterales en esa columna. Es preferible al estirado, que la achataba y la hacía difícil de
+  reconocer, y la foto completa sigue en la ficha de detalle — pero si lo importante de un ítem
+  queda en un borde, ahí no se verá.
 - La fuente se carga desde Google Fonts, así que **la primera visita sin conexión** cae a la
   tipografía del sistema hasta que la fuente quede en caché.

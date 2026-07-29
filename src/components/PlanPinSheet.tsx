@@ -51,6 +51,15 @@ export function PlanPinSheet({ initialPin, onCancel, onSave }: Props) {
   const viewRef = useRef<PlanView>({ ...IDENTITY_VIEW });
   const draftRef = useRef<PlanPin | null>(initialPin);
   const imageRef = useRef<HTMLImageElement | null>(null);
+  /**
+   * Punteros tocando la lamina ahora mismo, y el pin que dejaria el toque si
+   * resulta ser un toque y no el principio de un pinch. El pin se confirma al
+   * levantar el dedo: mientras el gesto sigue vivo no se sabe cual de los dos
+   * es.
+   */
+  const activePointersRef = useRef(new Set<number>());
+  const candidatePinRef = useRef<PlanPin | null>(null);
+  const gestureIsPinchRef = useRef(false);
 
   const [planId, setPlanId] = useState<string | null>(initialPin?.id ?? PLANS[0]?.id ?? null);
   const [note, setNote] = useState(HINT);
@@ -202,10 +211,33 @@ export function PlanPinSheet({ initialPin, onCancel, onSave }: Props) {
             const canvas = canvasRef.current;
             if (!canvas || !imageRef.current || !planId) return;
             event.preventDefault();
+            activePointersRef.current.add(event.pointerId);
+            // Segundo dedo: esto es un pinch, no un toque. Se descarta el pin
+            // que habria dejado el primero.
+            if (activePointersRef.current.size > 1) {
+              gestureIsPinchRef.current = true;
+              candidatePinRef.current = null;
+              return;
+            }
             const point = toCanvasPoint(canvas, event.clientX, event.clientY);
             const normalized = normalizePinPosition(point, canvas, viewRef.current);
-            draftRef.current = { id: planId, x: normalized.x, y: normalized.y };
-            paint();
+            candidatePinRef.current = { id: planId, x: normalized.x, y: normalized.y };
+          }}
+          onPointerUp={(event) => {
+            activePointersRef.current.delete(event.pointerId);
+            if (activePointersRef.current.size > 0) return;
+            if (!gestureIsPinchRef.current && candidatePinRef.current) {
+              draftRef.current = candidatePinRef.current;
+              paint();
+            }
+            gestureIsPinchRef.current = false;
+            candidatePinRef.current = null;
+          }}
+          onPointerCancel={(event) => {
+            activePointersRef.current.delete(event.pointerId);
+            if (activePointersRef.current.size > 0) return;
+            gestureIsPinchRef.current = false;
+            candidatePinRef.current = null;
           }}
         />
       </div>
