@@ -98,11 +98,37 @@ create index on items (report_id);
 -- =====================================================================
 -- RLS - nadie ve nada fuera de su org
 -- =====================================================================
+-- search_path fijo: sin esto, un SECURITY DEFINER puede ser secuestrado por
+-- cualquiera que logre crear un objeto que resuelva antes que memberships.
+-- Es el lint function_search_path_mutable de Supabase.
 create or replace function is_member(target_org uuid)
-returns boolean language sql security definer stable as $$
+returns boolean language sql security definer stable
+set search_path = public, pg_temp as $$
   select exists (
     select 1 from memberships
     where user_id = auth.uid() and org_id = target_org
+  );
+$$;
+
+-- Un reporte se ve si eres miembro de su org.
+create or replace function report_is_visible(target_report uuid)
+returns boolean language sql security definer stable
+set search_path = public, pg_temp as $$
+  select exists (
+    select 1 from reports r
+    where r.id = target_report and is_member(r.org_id)
+  );
+$$;
+
+-- Se escribe solo mientras sea draft. Emitido = congelado.
+create or replace function report_is_writable(target_report uuid)
+returns boolean language sql security definer stable
+set search_path = public, pg_temp as $$
+  select exists (
+    select 1 from reports r
+    where r.id = target_report
+      and r.status = 'draft'
+      and is_member(r.org_id)
   );
 $$;
 
@@ -126,12 +152,28 @@ create policy plan_all on plans
   for all using (exists (select 1 from projects p where p.id = project_id and is_member(p.org_id)))
   with check (exists (select 1 from projects p where p.id = project_id and is_member(p.org_id)));
 
-create policy report_all on reports
-  for all using (is_member(org_id)) with check (is_member(org_id));
+-- 'for all' incluia DELETE, asi que un emitido se podia borrar entero y el
+-- trigger de abajo ni se enteraba: solo cubre UPDATE. Se parte la policy.
+create policy report_read on reports
+  for select using (is_member(org_id));
+create policy report_insert on reports
+  for insert with check (is_member(org_id));
+create policy report_update on reports
+  for update using (is_member(org_id)) with check (is_member(org_id));
+create policy report_delete on reports
+  for delete using (is_member(org_id) and status = 'draft');
 
-create policy item_all on items
-  for all using (exists (select 1 from reports r where r.id = report_id and is_member(r.org_id)))
-  with check (exists (select 1 from reports r where r.id = report_id and is_member(r.org_id)));
+-- El trigger protege la fila de reports, no sus items. Sin esto, un reporte
+-- emitido conserva su cabecera intacta mientras le vacian el contenido.
+create policy item_read on items
+  for select using (report_is_visible(report_id));
+create policy item_insert on items
+  for insert with check (report_is_writable(report_id));
+create policy item_update on items
+  for update using (report_is_writable(report_id))
+  with check (report_is_writable(report_id));
+create policy item_delete on items
+  for delete using (report_is_writable(report_id));
 
 -- Un reporte emitido no se toca. Las correcciones crean revision nueva.
 create or replace function block_issued_edits()
@@ -148,3 +190,51 @@ create trigger reports_immutable_when_issued
   before update on reports
   for each row when (old.status = 'issued')
   execute function block_issued_edits();
+
+-- =====================================================================
+-- Storage
+--   Un bucket privado. Convencion de ruta:  <org_id>/<project_id>/<archivo>
+--   Ahi viven tanto los planos (plans.storage_path) como las fotos ya
+--   marcadas y redactadas (items.photo_path / thumb_path).
+--
+--   El control es a nivel de ORG, no de reporte. Un reporte emitido protege
+--   sus filas via las policies de arriba, pero su foto en Storage sigue
+--   siendo reemplazable por un miembro de la org. Cerrar eso exigiria meter
+--   el report_id en la ruta y resolverlo en cada policy; no vale la pena
+--   mientras issued_snapshot sea el registro de lo que se emitio.
+-- =====================================================================
+insert into storage.buckets (id, name, public)
+values ('visit-media', 'visit-media', false)
+on conflict (id) do nothing;
+
+-- La primera carpeta de la ruta es el org_id. Si no es un uuid valido, el
+-- cast reventaria dentro de la policy en vez de negar, asi que devuelve null
+-- y deja que is_member(null) resuelva a false.
+create or replace function org_from_path(object_name text)
+returns uuid language plpgsql immutable
+set search_path = public, pg_temp as $$
+begin
+  return ((storage.foldername(object_name))[1])::uuid;
+exception when others then
+  return null;
+end;
+$$;
+
+create policy visit_media_read on storage.objects
+  for select using (
+    bucket_id = 'visit-media' and is_member(org_from_path(name))
+  );
+create policy visit_media_insert on storage.objects
+  for insert with check (
+    bucket_id = 'visit-media' and is_member(org_from_path(name))
+  );
+create policy visit_media_update on storage.objects
+  for update using (
+    bucket_id = 'visit-media' and is_member(org_from_path(name))
+  ) with check (
+    bucket_id = 'visit-media' and is_member(org_from_path(name))
+  );
+create policy visit_media_delete on storage.objects
+  for delete using (
+    bucket_id = 'visit-media' and is_member(org_from_path(name))
+  );
