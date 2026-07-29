@@ -1,0 +1,551 @@
+/**
+ * Estilos de la app. Un solo archivo: la superficie es una pantalla y dos
+ * hojas modales, y partirlo en modulos por componente costaria mas de lo que
+ * aclara.
+ *
+ * Las anulaciones de modo oscuro que no se resuelven con tokens van al final
+ * del archivo, para que ganen en la cascada.
+ */
+
+* {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.svr {
+  font-family: 'Archivo', system-ui, sans-serif;
+  color: var(--text);
+  background: var(--bg);
+  max-width: 560px;
+  margin: 0 auto;
+  padding: 0 0 120px;
+  min-height: 100vh;
+}
+
+.svr h1,
+.svr h2 {
+  margin: 0;
+}
+
+/* ------------------------------------------------------------- cabecera */
+.mast {
+  background: var(--ink);
+  color: var(--paper);
+  padding: 16px 18px;
+}
+.mast .brandrow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(123, 167, 175, 0.35);
+}
+.mast svg {
+  width: 20px;
+  height: auto;
+  flex: none;
+}
+.mast .wm {
+  font-size: 12px;
+  letter-spacing: 0.34em;
+  text-transform: uppercase;
+  font-weight: 600;
+  color: var(--mark);
+}
+.mast .btm {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 12px;
+}
+.mast h1 {
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: -0.015em;
+  line-height: 1.15;
+}
+.mast .sub {
+  font-size: 9px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #7e8a94;
+  margin-top: 5px;
+}
+
+.tally {
+  font-family: 'IBM Plex Mono', monospace;
+  text-align: right;
+  line-height: 1;
+}
+.tally b {
+  display: block;
+  font-size: 28px;
+  font-weight: 500;
+  color: var(--mark);
+}
+.tally span {
+  display: block;
+  font-size: 8.5px;
+  letter-spacing: 0.16em;
+  color: #7e8a94;
+  margin-top: 4px;
+}
+
+/* --------------------------------------------------------- formulario */
+.hdr {
+  padding: 14px 18px;
+  border-bottom: 2px solid var(--line);
+  display: grid;
+  grid-template-columns: 1fr 132px;
+  gap: 10px;
+}
+
+label.lbl,
+span.lbl {
+  display: block;
+  font-size: 9px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--dim);
+  margin-bottom: 4px;
+  font-weight: 600;
+}
+
+.svr input,
+.svr textarea,
+.svr select {
+  width: 100%;
+  font-family: 'Archivo', sans-serif;
+  font-size: 15px;
+  color: var(--text);
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  padding: 9px 10px;
+}
+.svr textarea {
+  resize: vertical;
+  min-height: 74px;
+  line-height: 1.4;
+}
+.svr input:focus,
+.svr textarea:focus,
+.svr select:focus {
+  outline: 2px solid var(--mark);
+  outline-offset: 0;
+  border-color: var(--mark);
+}
+
+/* ------------------------------------------------------------- botones */
+.btn {
+  display: block;
+  width: 100%;
+  border: 0;
+  border-radius: 2px;
+  padding: 15px;
+  font-family: 'Archivo', sans-serif;
+  font-size: 13.5px;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  text-align: center;
+  cursor: pointer;
+}
+.btn-primary {
+  background: var(--mark);
+  color: #0d1a22;
+}
+.btn-primary:active {
+  background: #6b959d;
+}
+.btn-dark {
+  background: var(--ink);
+  color: var(--paper);
+}
+.btn-ghost {
+  background: transparent;
+  color: var(--text);
+  border: 1px solid var(--line);
+}
+.btn-row {
+  display: flex;
+  gap: 8px;
+}
+.btn-row .btn {
+  flex: 1;
+}
+
+.capture {
+  padding: 16px 18px;
+  border-bottom: 1px solid var(--line);
+}
+input[type='file'] {
+  display: none;
+}
+
+/* -------------------------------------------------------------- listado */
+.empty {
+  padding: 44px 24px;
+  text-align: center;
+  color: var(--dim);
+  font-size: 14px;
+  line-height: 1.5;
+}
+.empty strong {
+  display: block;
+  color: var(--text);
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+
+.zoneband {
+  background: var(--ink);
+  color: var(--mark);
+  padding: 6px 18px;
+  font-size: 9.5px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  font-weight: 700;
+}
+
+.row {
+  display: flex;
+  gap: 12px;
+  padding: 13px 18px;
+  border-bottom: 1px solid var(--line);
+  align-items: flex-start;
+}
+.row .idx {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  color: var(--dim);
+  width: 22px;
+  padding-top: 2px;
+  flex: none;
+}
+.row img {
+  width: 74px;
+  height: 74px;
+  object-fit: cover;
+  border: 1px solid var(--line);
+  flex: none;
+  background: #e4e3de;
+}
+.row .body {
+  flex: 1;
+  min-width: 0;
+}
+.row .cmt {
+  font-size: 14px;
+  line-height: 1.35;
+  word-wrap: break-word;
+}
+.row .time {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  color: var(--dim);
+  margin-top: 5px;
+}
+.row .pin {
+  display: inline-block;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 9.5px;
+  color: #0d1a22;
+  background: var(--mark);
+  padding: 2px 5px;
+  border-radius: 2px;
+  margin-top: 5px;
+}
+.row .kill {
+  border: 0;
+  background: none;
+  color: var(--flag);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  padding: 4px 0 0;
+  cursor: pointer;
+  text-transform: uppercase;
+}
+
+/* Barra fija de acciones. env(safe-area-inset-bottom) la mantiene por
+   encima del indicador de gestos en iPhone. */
+.foot {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  max-width: 560px;
+  margin: 0 auto;
+  padding: 12px 18px calc(12px + env(safe-area-inset-bottom));
+  background: var(--bg);
+  border-top: 2px solid var(--line);
+}
+
+/* --------------------------------------------------------- hojas modales */
+.sheet {
+  position: fixed;
+  inset: 0;
+  background: var(--bg);
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  max-width: 560px;
+  margin: 0 auto;
+}
+.sheet-top {
+  background: var(--ink);
+  color: var(--paper);
+  padding: 12px 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.sheet-top h2 {
+  font-size: 12px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  font-weight: 600;
+  color: var(--mark);
+}
+.sheet-top button {
+  background: none;
+  border: 0;
+  color: var(--paper);
+  font-size: 12.5px;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  cursor: pointer;
+  text-transform: uppercase;
+}
+.sheet-top .rotate-btn {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  padding: 6px 12px;
+  font-size: 11px;
+  color: var(--mark);
+}
+
+.canvas-wrap {
+  background: #0a1219;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  overflow: hidden;
+}
+/* touch-action:none deja que los pointer events del trazo lleguen enteros
+   en vez de convertirse en scroll. */
+canvas {
+  max-width: 100%;
+  touch-action: none;
+  display: block;
+}
+
+.tools {
+  display: flex;
+  gap: 6px;
+  padding: 9px 12px;
+  background: #101a23;
+}
+.tools .t {
+  flex: 1;
+  background: #22303c;
+  color: #c7d3d8;
+  border: 0;
+  border-radius: 2px;
+  padding: 11px 4px;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  cursor: pointer;
+  font-family: 'Archivo', sans-serif;
+}
+.tools .t.on {
+  background: var(--flag);
+  color: #fff;
+}
+.tools .t.on.blk {
+  background: #c7d3d8;
+  color: #101a23;
+}
+
+.form {
+  padding: 14px 16px;
+  overflow-y: auto;
+  flex: 1;
+}
+.form > div {
+  margin-bottom: 12px;
+}
+.form input,
+.form textarea,
+.form .locbtn {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 7px;
+}
+.chip {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  padding: 5px 9px;
+  border: 1px solid var(--line);
+  background: var(--card);
+  border-radius: 2px;
+  cursor: pointer;
+  color: var(--text);
+}
+.chip.on {
+  background: var(--ink);
+  color: var(--mark);
+  border-color: var(--ink);
+}
+/* Lamina declarada en PLANS[] cuyo JPEG no se pudo cargar. */
+.chip.miss {
+  opacity: 0.4;
+}
+
+.locbtn {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  padding: 11px 10px;
+  cursor: pointer;
+  font-family: 'Archivo', sans-serif;
+  font-size: 14px;
+  color: var(--text);
+  text-align: left;
+}
+.locbtn em {
+  font-style: normal;
+  font-family: 'Archivo', sans-serif;
+  font-size: 13px;
+  color: var(--dim);
+  font-weight: 400;
+}
+
+.plchips {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding: 9px 12px;
+  background: #101a23;
+  -webkit-overflow-scrolling: touch;
+}
+.plchips .chip {
+  flex: none;
+  background: #22303c;
+  border-color: #22303c;
+  color: #c7d3d8;
+}
+.plchips .chip.on {
+  background: var(--mark);
+  border-color: var(--mark);
+  color: #0d1a22;
+}
+
+.note {
+  font-size: 11px;
+  color: var(--dim);
+  line-height: 1.45;
+  padding: 10px 18px;
+}
+.status {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  color: var(--mark);
+  padding: 8px 18px 0;
+  min-height: 20px;
+}
+
+/* ---------------------------------------------------------- modo oscuro */
+/* Solo lo que no sale de los tokens: superficies y bordes que en claro son
+   implicitos. Va al final para ganar la cascada frente a las reglas base. */
+@media (prefers-color-scheme: dark) {
+  .svr input,
+  .svr textarea,
+  .svr select {
+    background: #2a2a2a;
+    color: #e8e6e0;
+    border-color: #444444;
+  }
+  .chip {
+    background: #2a2a2a;
+    border-color: #444444;
+    color: #e8e6e0;
+  }
+  .chip.on {
+    background: var(--ink);
+    color: var(--mark);
+    border-color: var(--ink);
+  }
+  .locbtn {
+    background: #2a2a2a;
+    border-color: #444444;
+    color: #e8e6e0;
+  }
+  .foot {
+    background: #1a1a1a;
+    border-top-color: #333333;
+  }
+  .sheet {
+    background: #1a1a1a;
+  }
+  .hdr {
+    border-bottom-color: #333333;
+  }
+  .row {
+    border-bottom-color: #333333;
+  }
+  .row img {
+    border-color: #444444;
+    background: #2a2a2a;
+  }
+  .empty strong {
+    color: #e8e6e0;
+  }
+  .zoneband {
+    background: #2a2a2a;
+    color: var(--mark);
+  }
+  .mast {
+    background: #0d0d0d;
+    color: #e8e6e0;
+  }
+  .mast .sub {
+    color: #666666;
+  }
+  .btn-ghost {
+    color: #e8e6e0;
+    border-color: #444444;
+  }
+  .btn-dark {
+    background: #2a2a2a;
+    color: #e8e6e0;
+  }
+  /* .plchips redeclara los chips de lamina: en oscuro tambien deben
+     mantener su paleta propia sobre el fondo azulado de la hoja. */
+  .plchips .chip {
+    background: #22303c;
+    border-color: #22303c;
+    color: #c7d3d8;
+  }
+  .plchips .chip.on {
+    background: var(--mark);
+    border-color: var(--mark);
+    color: #0d1a22;
+  }
+}
