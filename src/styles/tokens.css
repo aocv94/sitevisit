@@ -1,0 +1,35 @@
+/**
+ * Tokens de color. Unico sitio donde se declaran valores cromaticos crudos.
+ *
+ * En la fase 1 (supabase/schema.sql: orgs.brand_color, orgs.logo_url) estos
+ * pasan a venir por organizacion; el resto del CSS ya consume solo variables,
+ * asi que bastara con sobrescribirlas en :root desde JS.
+ */
+
+:root {
+  --mark: #7ba7af;
+  --ink: #14202b;
+  --paper: #f5f4f1;
+  --line: #d6d5d0;
+  --dim: #6d7680;
+  --flag: #c8352a;
+  --bg: #f5f4f1;
+  --text: #14202b;
+  --card: #ffffff;
+  --border: #d6d5d0;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --mark: #7ba7af;
+    --ink: #e8e6e0;
+    --paper: #1a1a1a;
+    --line: #333333;
+    --dim: #999999;
+    --flag: #e8554a;
+    --bg: #1a1a1a;
+    --text: #e8e6e0;
+    --card: #2a2a2a;
+    --border: #444444;
+  }
+}
