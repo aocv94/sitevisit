@@ -83,15 +83,28 @@ export async function rotateDataUrl(
 }
 
 /**
+ * Recorte cuadrado centrado, tipo `cover`: el lado mas corto manda y del
+ * largo se descarta la misma cantidad por cada extremo.
+ */
+export function squareCropRect(source: { width: number; height: number }): {
+  sx: number;
+  sy: number;
+  side: number;
+} {
+  const side = Math.min(source.width, source.height);
+  return { sx: (source.width - side) / 2, sy: (source.height - side) / 2, side };
+}
+
+/**
  * Miniatura para la columna PHOTO de la tabla resumen del PDF.
  *
  * Se genera desde la foto SIN marcas: la tabla resumen es un indice visual, el
  * detalle marcado va en su ficha.
  *
- * Nota: dibuja forzando el cuadrado, asi que una foto no cuadrada sale
- * deformada en esa columna. Es el comportamiento historico y se conserva a
- * proposito; cambiarlo altera el PDF que ya se ha emitido a contratistas.
- * Para arreglarlo, recortar tipo `cover` en vez de estirar.
+ * Recorta al centro en vez de estirar. Estirando, una foto apaisada salia
+ * achatada en la tabla y costaba reconocerla; el recorte pierde los bordes
+ * pero mantiene las proporciones, que es lo que hace la miniatura util como
+ * indice. La foto completa y sin recortar sigue en la ficha de detalle.
  */
 export function makeThumbnail(
   img: HTMLImageElement | HTMLCanvasElement,
@@ -99,7 +112,8 @@ export function makeThumbnail(
   quality: number = THUMB_QUALITY
 ): string {
   const canvas = createCanvas(size, size);
-  context2d(canvas).drawImage(img, 0, 0, size, size);
+  const { sx, sy, side } = squareCropRect(img);
+  context2d(canvas).drawImage(img, sx, sy, side, side, 0, 0, size, size);
   return canvas.toDataURL('image/jpeg', quality);
 }
 
