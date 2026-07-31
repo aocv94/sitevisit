@@ -1,0 +1,448 @@
+/**
+ * Login y paneles de administracion.
+ *
+ * Prefijo `adm-` a proposito: la pantalla de captura usa `.svr` y sus reglas
+ * asumen un ancho de 560px pensado para el telefono. Estas pantallas se ven
+ * sobre todo en un portatil y no deben heredar nada de aquella.
+ *
+ * Los colores salen de tokens.css, asi que el modo oscuro sale gratis.
+ */
+
+.adm,
+.adm-auth {
+  font-family: 'Archivo', system-ui, sans-serif;
+  color: var(--text);
+  background: var(--bg);
+  min-height: 100vh;
+}
+
+/* ------------------------------------------------------------ pantallas
+   de autenticacion: una tarjeta centrada */
+.adm-auth {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 18px;
+}
+
+.adm-auth-card {
+  width: 100%;
+  max-width: 400px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  padding: 28px 24px;
+}
+
+.adm-auth-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-bottom: 18px;
+  margin-bottom: 18px;
+  border-bottom: 1px solid var(--line);
+  font-size: 12px;
+  letter-spacing: 0.34em;
+  text-transform: uppercase;
+  font-weight: 600;
+  color: var(--mark);
+}
+.adm-auth-brand svg {
+  width: 18px;
+  height: auto;
+  flex: none;
+}
+
+.adm-auth-card h1 {
+  margin: 0 0 6px;
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: -0.015em;
+}
+
+.adm-auth-footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+  font-size: 13px;
+}
+.adm-auth-footer a,
+.adm-linklike {
+  color: var(--mark);
+  text-decoration: none;
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  cursor: pointer;
+}
+.adm-auth-footer a:hover,
+.adm-linklike:hover {
+  text-decoration: underline;
+}
+.adm-danger {
+  color: var(--flag);
+}
+
+/* ------------------------------------------------------------ formularios */
+.adm-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-top: 18px;
+}
+
+.adm-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+.adm-field > span {
+  font-size: 9px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--dim);
+  font-weight: 600;
+}
+.adm-field input,
+.adm-field select,
+.adm-field textarea,
+.adm select {
+  font-family: 'Archivo', sans-serif;
+  font-size: 15px;
+  color: var(--text);
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  padding: 9px 10px;
+  width: 100%;
+}
+.adm-field textarea {
+  resize: vertical;
+  line-height: 1.45;
+}
+.adm-field input:focus,
+.adm-field select:focus,
+.adm-field textarea:focus {
+  outline: 2px solid var(--mark);
+  border-color: var(--mark);
+}
+.adm-field input[type='color'] {
+  padding: 4px;
+  height: 40px;
+  cursor: pointer;
+}
+.adm-field small {
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.adm-btn {
+  border: 0;
+  border-radius: 2px;
+  padding: 12px 18px;
+  font-family: 'Archivo', sans-serif;
+  font-size: 12.5px;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+.adm-btn:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+.adm-btn-primary {
+  background: var(--mark);
+  color: #0d1a22;
+}
+.adm-btn-ghost {
+  background: transparent;
+  color: var(--text);
+  border: 1px solid var(--line);
+}
+
+.adm-error,
+.adm-notice {
+  font-size: 13px;
+  line-height: 1.45;
+  margin: 0;
+  padding: 9px 11px;
+  border-radius: 2px;
+}
+.adm-error {
+  color: var(--flag);
+  background: rgba(200, 53, 42, 0.08);
+  border: 1px solid rgba(200, 53, 42, 0.3);
+}
+.adm-notice {
+  color: var(--text);
+  background: rgba(123, 167, 175, 0.12);
+  border: 1px solid rgba(123, 167, 175, 0.4);
+}
+
+.adm-muted {
+  color: var(--dim);
+  font-size: 13px;
+  line-height: 1.5;
+  margin: 6px 0;
+}
+.adm-pre {
+  background: var(--ink);
+  color: var(--paper);
+  padding: 12px;
+  border-radius: 2px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11.5px;
+  line-height: 1.6;
+  overflow-x: auto;
+}
+code {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.92em;
+}
+
+.adm-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Archivo', system-ui, sans-serif;
+}
+
+/* ------------------------------------------------------------- cabecera */
+.adm-top {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: wrap;
+  background: var(--ink);
+  color: var(--paper);
+  padding: 12px 20px;
+}
+.adm-top-brand {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 11px;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  font-weight: 600;
+  color: var(--mark);
+}
+.adm-top-brand svg {
+  width: 16px;
+  height: auto;
+  flex: none;
+}
+.adm-nav {
+  display: flex;
+  gap: 6px;
+  flex: 1;
+  flex-wrap: wrap;
+}
+.adm-nav a {
+  color: #b8c4cb;
+  text-decoration: none;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-weight: 600;
+  padding: 6px 10px;
+  border-radius: 2px;
+}
+.adm-nav a:hover {
+  color: var(--paper);
+}
+.adm-nav a.active {
+  background: rgba(123, 167, 175, 0.18);
+  color: var(--mark);
+}
+.adm-top-user {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 12px;
+}
+.adm-top-user .adm-muted {
+  color: #8d99a2;
+  margin: 0;
+}
+
+/* --------------------------------------------------------------- cuerpo */
+.adm-main {
+  max-width: 1040px;
+  margin: 0 auto;
+  padding: 24px 20px 64px;
+}
+
+.adm-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding-bottom: 14px;
+  border-bottom: 2px solid var(--line);
+}
+.adm-head h1 {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -0.015em;
+}
+.adm-head-actions select {
+  width: auto;
+  min-width: 180px;
+}
+
+.adm-section {
+  margin-top: 30px;
+}
+.adm-section h2 {
+  margin: 0 0 4px;
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--dim);
+  font-weight: 700;
+}
+
+/* Formulario en linea: se apila solo cuando no cabe. */
+.adm-inline-form {
+  display: flex;
+  gap: 12px;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  margin: 12px 0 18px;
+}
+.adm-inline-form .adm-field {
+  flex: 1 1 200px;
+}
+.adm-inline-form .adm-field-narrow {
+  flex: 0 0 120px;
+}
+.adm-inline-form .adm-field-wide {
+  flex: 1 1 100%;
+}
+.adm-inline-form-block {
+  align-items: flex-start;
+}
+.adm-inline-msg {
+  flex: 1 1 100%;
+}
+
+/* --------------------------------------------------------------- tarjetas */
+.adm-cards {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 10px;
+}
+.adm-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  width: 100%;
+  text-align: left;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  padding: 14px;
+  cursor: pointer;
+  font: inherit;
+  color: var(--text);
+}
+.adm-card:hover {
+  border-color: var(--mark);
+}
+.adm-card-on {
+  border-color: var(--mark);
+  box-shadow: inset 0 0 0 1px var(--mark);
+}
+.adm-card strong {
+  font-size: 15px;
+}
+.adm-card .adm-muted {
+  margin: 0;
+  font-size: 11.5px;
+}
+.adm-swatch {
+  width: 22px;
+  height: 6px;
+  border-radius: 3px;
+  margin-bottom: 4px;
+}
+
+/* ---------------------------------------------------------------- tablas */
+.adm-table-wrap {
+  overflow-x: auto;
+  margin-top: 12px;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+}
+.adm-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+  background: var(--card);
+}
+.adm-table th {
+  text-align: left;
+  font-size: 9px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--dim);
+  font-weight: 700;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--line);
+  white-space: nowrap;
+}
+.adm-table td {
+  padding: 11px 12px;
+  border-bottom: 1px solid var(--line);
+  vertical-align: top;
+}
+.adm-table tr:last-child td {
+  border-bottom: 0;
+}
+.adm-table .adm-muted {
+  margin: 2px 0 0;
+  font-size: 12px;
+}
+.adm-table select {
+  width: auto;
+  min-width: 130px;
+  padding: 5px 7px;
+  font-size: 13px;
+}
+.adm-cell-actions {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.adm-badge {
+  display: inline-block;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  padding: 3px 7px;
+  border-radius: 2px;
+  background: var(--line);
+  color: var(--text);
+  white-space: nowrap;
+}
+.adm-badge-ok {
+  background: var(--mark);
+  color: #0d1a22;
+}

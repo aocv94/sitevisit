@@ -1,4 +1,5 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { CaptureBar } from '@/components/CaptureBar';
 import { FooterActions } from '@/components/FooterActions';
 import { ItemList } from '@/components/ItemList';
@@ -9,15 +10,35 @@ import { StatusLine } from '@/components/StatusLine';
 import { useConnectivityFlash } from '@/hooks/useConnectivityFlash';
 import { downscaleToDataUrl, loadImage, readFileAsDataUrl } from '@/lib/image';
 import { createItemId } from '@/lib/report';
+import { useAuth } from '@/auth/authContext';
+import { ReportProvider } from '@/state/ReportProvider';
 import { useReport } from '@/state/reportContext';
+import { LocalReportRepository } from '@/storage/localReportRepository';
 import type { ReportItem } from '@/types/report';
 
 function newDraft(src: string, ts: number): ReportItem {
   return { id: createItemId(), no: null, src, ts, zone: '', cmt: '', plan: null };
 }
 
-export function App() {
+/**
+ * La pantalla de campo. Sigue guardando en el dispositivo: la sincronizacion
+ * con Supabase es el paso siguiente, y hasta entonces el PDF es el unico
+ * entregable. Que este detras del login no cambia eso.
+ */
+export function CapturePage() {
+  // Una instancia por montaje basta: la clave de localStorage es fija.
+  const repository = useMemo(() => new LocalReportRepository(), []);
+  return (
+    <ReportProvider repository={repository}>
+      <CaptureScreen />
+    </ReportProvider>
+  );
+}
+
+function CaptureScreen() {
   const { flash, saveItem } = useReport();
+  const { isAppOwner, leaderOrgs } = useAuth();
+  const canLeaveToAdmin = isAppOwner || leaderOrgs.length > 0;
   const [editing, setEditing] = useState<ReportItem | null>(null);
   /**
    * Cola de fotos pendientes cuando se eligen varias de la galeria. Se
@@ -71,6 +92,12 @@ export function App() {
       <div className="note">
         Data stays on this device. Export the PDF and file it before clearing. Item numbers are
         permanent - deleting an item leaves a gap rather than renumbering.
+        {canLeaveToAdmin && (
+          <>
+            {' '}
+            <Link to="/empresa">Volver a la administración</Link>.
+          </>
+        )}
       </div>
 
       <FooterActions />

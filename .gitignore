@@ -1,6 +1,9 @@
 node_modules/
 dist/
 dev-dist/
+# Cache de dependencias de Vite. Normalmente cae en node_modules/.vite, pero
+# acaba en la raiz si el dev server se lanza desde otro directorio.
+.vite/
 *.local
 .env
 .env.*

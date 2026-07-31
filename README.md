@@ -42,14 +42,21 @@ Está pensada para usarse desde el teléfono, **sin señal**, caminando por la o
 
 ## 2. Stack
 
-React 19 + TypeScript + Vite, con `vite-plugin-pwa` para el service worker. Sin backend.
+React 19 + TypeScript + Vite, con `vite-plugin-pwa` para el service worker.
+Backend en Supabase: autenticación, empresas, proyectos y permisos.
 
 ```bash
 npm install
-npm run dev        # servidor de desarrollo en http://localhost:5173
-npm run build      # typecheck + bundle de produccion en dist/
-npm run check      # typecheck + lint + tests
+cp .env.example .env   # y rellena las dos claves de Supabase
+npm run dev            # servidor de desarrollo en http://localhost:5173
+npm run build          # typecheck + bundle de produccion en dist/
+npm run check          # typecheck + lint + tests
 ```
+
+Sin `.env` la app arranca igual y enseña una pantalla explicando qué falta.
+La puesta en marcha del backend está en [`supabase/README.md`](supabase/README.md):
+crear el proyecto, aplicar migraciones, desplegar la Edge Function y crear el
+primer dueño de la app.
 
 | Script                          | Qué hace                                                                            |
 | ------------------------------- | ----------------------------------------------------------------------------------- |
@@ -60,17 +67,39 @@ npm run check      # typecheck + lint + tests
 | `test` / `test:watch`           | Vitest sobre la lógica pura.                                                        |
 | `check`                         | Los tres anteriores. Lo que conviene correr antes de un commit.                     |
 
+### Quién puede hacer qué
+
+|                                  | Dueño de la app | Líder de empresa                        | Colaborador |
+| -------------------------------- | --------------- | --------------------------------------- | ----------- |
+| Crear empresas y nombrar líderes | Sí              | No                                      | No          |
+| Crear proyectos                  | Sí              | Solo en la suya                         | No          |
+| Invitar personas                 | Cualquier rol   | Colaborador y administrador, en la suya | No          |
+| Levantar reportes                | Sí              | Sí                                      | Sí          |
+| Ver otras empresas               | Sí              | No                                      | No          |
+
+Lo imponen las políticas RLS de la base de datos, no la interfaz: las guardas
+de React son comodidad de navegación, no seguridad. Cualquiera con la `anon key`
+puede llamar a la API sin pasar por la pantalla.
+
 ---
 
 ## 3. Estructura
 
 ```
 src/
-├── main.tsx                  arranque: root de React + registro del service worker
-├── App.tsx                   composicion de la pantalla y cola de fotos pendientes
+├── main.tsx                  arranque: router + sesion + registro del service worker
+├── AppRoutes.tsx             rutas y a donde aterriza cada rol al entrar
 ├── sw.ts                     service worker (politica de caché offline)
+├── auth/                     AuthProvider (sesion, perfil, membresias) y guardas
+├── api/                      consultas a Supabase: orgs, projects, members
+├── lib/supabase.ts           cliente; sin claves no revienta, avisa
+├── routes/
+│   ├── LoginPage / SignUpPage / ForgotPasswordPage / AcceptInvitePage
+│   ├── OwnerDashboard.tsx    empresas y lideres (dueño de la app)
+│   ├── LeaderDashboard.tsx   proyectos y equipo (lider de empresa)
+│   └── CapturePage.tsx       la pantalla de campo
 ├── config/project.ts         PLANS, ZONES y BUILD — la configuracion por proyecto
-├── types/                    ReportState/ReportItem (contrato con localStorage) y Mark
+├── types/                    report.ts (contrato con localStorage), db.ts, markup.ts
 ├── lib/                      logica pura, sin React
 │   ├── report.ts             numeracion, orden por zona, autoRef, nombre de fichero
 │   ├── image.ts              reescalado, rotacion, miniatura, aplanado de marcas
@@ -79,15 +108,18 @@ src/
 ├── storage/                  ReportRepository (interfaz) + implementacion localStorage
 ├── state/                    ReportProvider: estado del reporte, persistencia, mensajes
 ├── pdf/                      renderReport.ts (jsPDF), theme.ts (retícula y color), logo.ts
-├── hooks/                    usePdfExport, useConnectivityFlash
+├── hooks/                    usePdfExport, useAsyncData, useConnectivityFlash
 ├── components/               un componente por bloque de UI
-└── styles/                   tokens.css (color) + app.css (todo lo demas)
+└── styles/                   tokens.css (color) + app.css (captura) + admin.css (paneles)
 
 public/
 ├── plans/*.jpg               las 15 laminas del proyecto actual
 └── icon-192.png, icon-512.png
 
-supabase/schema.sql           esquema de la fase 1, aun no conectado (ver §7)
+supabase/
+├── README.md                 puesta en marcha del backend
+├── migrations/               esquema y politicas RLS
+└── functions/invite-user/    alta de usuarios (necesita service_role: Deno, no navegador)
 ```
 
 **La regla que ordena todo esto**: `lib/` no importa React ni toca el DOM salvo canvas, y
