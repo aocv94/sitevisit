@@ -1,5 +1,7 @@
 <!DOCTYPE html>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Site Visit Report</title>
+<link rel="icon" href="brand/icon-192.png">
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#ffffff">
 <style>
@@ -15,7 +17,10 @@
     --ink:#20211c;
     --paper:#f5f4f1;
     --line:#d6d5d0;
-    --dim:#6d7680;
+    /* Gris calido, no frio: el papel y la tinta son calidos y un gris azulado
+       cantaba. Este tono da 5,7:1 sobre --bg; el anterior se quedaba en 4,15
+       y las etiquetas de 9px no se leian al sol. Mismo valor que MID en PDF. */
+    --dim:#5f6151;
     --flag:#c8352a;
     --bg:#f5f4f1;
     --text:#20211c;
@@ -194,8 +199,8 @@
   <div class="canvas-wrap"><canvas id="cv"></canvas></div>
   <div class="tools">
     <button class="t on" id="tDraw">Circle</button>
-    <button class="t" id="tText">Text</button>
     <button class="t" id="tUndo">Undo</button>
+    <button class="t" id="tRedo">Redo</button>
     <button class="t" id="tClear">Clear</button>
   </div>
   <div class="form">
@@ -204,7 +209,7 @@
       <input id="eZone" placeholder="Zone or area">
       <div class="chips" id="zoneChips"></div>
     </div>
-    <div>
+    <div id="eLocBlock">
       <label class="lbl">Plan</label>
       <button class="locbtn" id="eLoc"><span id="eLocTxt">Not set</span><em>Set pin</em></button>
     </div>
@@ -251,11 +256,11 @@
   const ZONES_DEFAULT=[];
   const ZONES={};
 
-  const BUILD='2026-07-31-landwise-f';
+  const BUILD='2026-07-31-landwise-g';
   const KEY='svr_state_v1';
 
   let state={proj:'',date:'',by:'',ref:'',refAuto:true,to:'',seq:0,items:[]};
-  let marks=[], cur=null, baseImg=null, editing=null, mode='pen', pending=[];
+  let marks=[], undone=[], cur=null, baseImg=null, editing=null, mode='pen', pending=[];
   let origSrc=null; // pristine, unrotated image for the current editing session
   let editPlan=null;
   let plDraft=null, plImg=null, plId=null;
@@ -368,9 +373,10 @@
   }
   function planById(id){ for(let i=0;i<PLANS.length;i++) if(PLANS[i].id===id) return PLANS[i]; return null; }
   function planLabel(p){ const d=p&&planById(p.id); return d?d.label:(p?p.id:''); }
-  /* Sin plantas cargadas el boton abriria una hoja vacia: se oculta y queda
-     solo la etiqueta PLAN reservando el sitio.                              */
-  if(!PLANS.length) $('eLoc').style.display='none';
+  /* Sin plantas cargadas el boton abriria una hoja vacia. Se oculta el bloque
+     entero: dejar la etiqueta PLAN suelta sin caja debajo se lee como un fallo,
+     no como un sitio reservado. Vuelve solo en cuanto PLANS tenga algo.      */
+  if(!PLANS.length) $('eLocBlock').style.display='none';
 
   (async function(){
     const s=await store.get();
@@ -491,7 +497,7 @@
     editing = existing || {id:Date.now()+'_'+Math.random().toString(36).slice(2), src:dataUrl, ts:ts, zone:'', cmt:'', plan:null, no:null};
     origSrc = editing.src;
     editPlan = editing.plan ? {id:editing.plan.id,x:editing.plan.x,y:editing.plan.y} : null;
-    marks=[]; cur=null; setMode('pen');
+    marks=[]; undone=[]; cur=null; setMode('pen');
     loadBaseImg(editing.src,function(){
       $('sheet').style.display='flex';
       $('eZone').value=editing.zone||''; $('eCmt').value=editing.cmt||'';
@@ -507,7 +513,10 @@
         c.fillRect(Math.min(m.x,m.x2)*scale, Math.min(m.y,m.y2)*scale,
                    Math.abs(m.x2-m.x)*scale, Math.abs(m.y2-m.y)*scale);
       }else if(m.type==='text'){
-        /* Placa clara detras: sobre una foto de obra el rojo solo se pierde
+        /* Dormido: la herramienta Text salio de la barra, esto ya no recibe
+           marcas nuevas. Se conserva entero para cuando vuelva, igual que el
+           rectangulo de arriba.
+           Placa clara detras: sobre una foto de obra el rojo solo se pierde
            contra cielo, hormigon o sombra segun donde caiga la etiqueta.   */
         const fs=txtH()*scale;
         c.font='700 '+fs+'px Archivo, sans-serif';
@@ -544,13 +553,6 @@
   cv.addEventListener('pointerdown',function(e){
     e.preventDefault();
     const p=pt(e,cv);
-    /* El texto no se arrastra: se toca donde va y se escribe. prompt() bloquea
-       el hilo, asi que ni se captura el puntero ni se abre un trazo.        */
-    if(mode==='text'){
-      const t=(prompt('Label text')||'').trim();
-      if(t){ marks.push({type:'text',x:p.x,y:p.y,txt:t}); redraw(); }
-      return;
-    }
     cv.setPointerCapture(e.pointerId);
     cur = mode==='rect' ? {type:'rect',x:p.x,y:p.y,x2:p.x,y2:p.y} : {type:'pen',pts:[p]};
   });
@@ -561,18 +563,25 @@
   });
   cv.addEventListener('pointerup',function(){
     if(cur){
-      if(cur.type==='rect'){ if(Math.abs(cur.x2-cur.x)>6&&Math.abs(cur.y2-cur.y)>6) marks.push(cur); }
-      else if(cur.pts.length>1) marks.push(cur);
+      const keep = cur.type==='rect'
+        ? (Math.abs(cur.x2-cur.x)>6 && Math.abs(cur.y2-cur.y)>6)
+        : cur.pts.length>1;
+      /* Un trazo nuevo invalida el rehacer: si no, Redo reviviria una marca
+         que ya no encaja con lo que hay dibujado ahora.                    */
+      if(keep){ marks.push(cur); undone=[]; }
     }
     cur=null; redraw();
   });
   cv.addEventListener('pointercancel',function(){ cur=null; redraw(); });
 
-  function setMode(m){ mode=m; $('tDraw').classList.toggle('on',m==='pen'); $('tText').classList.toggle('on',m==='text'); }
+  /* Text salio de la barra; su modo y su dibujado siguen en el codigo, dormidos.
+     Circle es el unico modo vivo, asi que setMode solo alterna ese boton.    */
+  function setMode(m){ mode=m; $('tDraw').classList.toggle('on',m==='pen'); }
   $('tDraw').addEventListener('click',function(){ setMode('pen'); });
-  $('tText').addEventListener('click',function(){ setMode('text'); });
-  $('tUndo').addEventListener('click',function(){ marks.pop(); redraw(); });
-  $('tClear').addEventListener('click',function(){ marks=[]; redraw(); });
+  $('tUndo').addEventListener('click',function(){ if(marks.length) undone.push(marks.pop()); redraw(); });
+  $('tRedo').addEventListener('click',function(){ if(undone.length) marks.push(undone.pop()); redraw(); });
+  /* CLEAR sigue siendo definitivo: Redo rehace trazos, no deshace un borrado. */
+  $('tClear').addEventListener('click',function(){ marks=[]; undone=[]; redraw(); });
   $('shCancel').addEventListener('click',function(){ $('sheet').style.display='none'; editing=null; nextPending(); });
 
   // Rotate button - always rotate the pristine origSrc by the cumulative
@@ -583,7 +592,8 @@
     if(!origSrc) return;
     rotation = (rotation + 90) % 360;
     const hadMarks = marks.length>0;
-    marks=[]; cur=null;
+    /* undone tambien: las marcas rehechas quedarian giradas respecto al lienzo. */
+    marks=[]; undone=[]; cur=null;
     rotateImage(origSrc, rotation, function(rotatedDataUrl){
       editing.src = rotatedDataUrl;
       loadBaseImg(rotatedDataUrl);
@@ -877,7 +887,8 @@
     const W=612, H=792, M=54;
     const proj=state.proj||'Site Visit Report';
     const list=ordered();
-    const INK=[32,33,28], MARK=hexRgb(BRAND.accent), MID=[111,113,105], HAIR=[214,213,208];
+    /* MID es el mismo gris calido que --dim en la UI. Si cambia uno, cambia el otro. */
+    const INK=[32,33,28], MARK=hexRgb(BRAND.accent), MID=[95,97,81], HAIR=[214,213,208];
     /* acento sobre papel blanco: mismo derivado x0.70 que --mark-deep en la UI */
     const DEEP=MARK.map(function(c){ return Math.round(c*0.70); });
     const FOOT=64;

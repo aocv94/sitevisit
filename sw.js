@@ -32,9 +32,10 @@
        you showing the old floor plan - the exact problem described above.
        Served cache-first here, so offline is still instant.
 
-     /(icon-192|icon-512).png  max-age=31536000, immutable
+     /brand/(icon-192|icon-512).png  max-age=31536000, immutable
        One year, no revalidation. Safe because if the icons change, the
-       filename changes.
+       filename changes. Viven en brand/ desde el rebrand; los de la raiz
+       eran los genericos anteriores y se borraron.
 */
 var VERSION = 'svr-v1';
 var TIMEOUT = 2500;
@@ -48,13 +49,11 @@ var SHELL = [
 ];
 
 /* Best-effort. Keep in sync with PLANS[] in index.html.
-   A missing file is skipped rather than failing the install. */
-var PLANS = [
-  './plans/101.jpg', './plans/102.jpg', './plans/103.jpg', './plans/103a.jpg',
-  './plans/104.jpg', './plans/105.jpg', './plans/106.jpg', './plans/107.jpg',
-  './plans/108.jpg', './plans/109.jpg', './plans/110.jpg', './plans/111.jpg',
-  './plans/112.jpg', './plans/113.jpg', './plans/114.jpg'
-];
+   A missing file is skipped rather than failing the install.
+
+   Vacio porque index.html tambien tiene PLANS=[] y los JPG ya no estan en el
+   arbol: dejarlos listados solo disparaba 15 peticiones 404 en cada install. */
+var PLANS = [];
 
 self.addEventListener('install', function(e){
   e.waitUntil(
