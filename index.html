@@ -46,12 +46,17 @@
 
   .hdr{padding:14px 18px;border-bottom:2px solid var(--line);display:grid;grid-template-columns:1fr 152px;gap:10px}
   label.lbl{display:block;font-size:9px;letter-spacing:.16em;text-transform:uppercase;color:var(--dim);margin-bottom:4px;font-weight:600}
-  .svr input,.svr textarea,.svr select{
+  /* La hoja de marcado vive fuera de .svr, asi que sus campos se quedaban con
+     el estilo por defecto del navegador: otra tipografia y otro tipo de caja
+     que los del formulario principal. Un solo bloque cubre los dos sitios.  */
+  .svr input,.svr textarea,.svr select,
+  .form input,.form textarea,.form .locbtn{
     width:100%;font-family:'Archivo',sans-serif;font-size:15px;color:var(--text);
     background:var(--card);border:1px solid var(--line);border-radius:2px;padding:9px 10px;
   }
-  .svr textarea{resize:vertical;min-height:74px;line-height:1.4}
-  .svr input:focus,.svr textarea:focus,.svr select:focus{outline:2px solid var(--mark-deep);outline-offset:0;border-color:var(--mark-deep)}
+  .svr textarea,.form textarea{resize:vertical;min-height:74px;line-height:1.4}
+  .svr input:focus,.svr textarea:focus,.svr select:focus,
+  .form input:focus,.form textarea:focus{outline:2px solid var(--mark-deep);outline-offset:0;border-color:var(--mark-deep)}
 
   .btn{display:block;width:100%;border:0;border-radius:2px;padding:15px;
     font-family:'Archivo',sans-serif;font-size:13.5px;font-weight:700;letter-spacing:.09em;
@@ -69,7 +74,9 @@
   .empty{padding:44px 24px;text-align:center;color:var(--dim);font-size:14px;line-height:1.5}
   .empty strong{display:block;color:var(--text);font-weight:700;margin-bottom:6px}
 
-  .zoneband{background:var(--ink);color:var(--mark);padding:6px 18px;
+  /* Banda de acento con texto oscuro: separa igual de bien que la barra casi
+     negra anterior sin ser el elemento mas pesado de una pagina clara.      */
+  .zoneband{background:var(--mark);color:var(--ink);padding:6px 18px;
     font-size:9.5px;letter-spacing:.2em;text-transform:uppercase;font-weight:700}
   .row{display:flex;gap:12px;padding:13px 18px;border-bottom:1px solid var(--line);align-items:flex-start}
   .row .idx{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--dim);width:22px;padding-top:2px;flex:none}
@@ -85,8 +92,11 @@
     padding:12px 18px calc(12px + env(safe-area-inset-bottom));background:var(--bg);border-top:2px solid var(--line)}
 
   .sheet{position:fixed;inset:0;background:var(--bg);z-index:50;display:flex;flex-direction:column;max-width:560px;margin:0 auto}
-  .sheet-top{background:var(--ink);color:var(--paper);padding:12px 16px;display:flex;justify-content:space-between;align-items:center}
-  .sheet-top h2{font-size:12px;letter-spacing:.18em;text-transform:uppercase;font-weight:600;color:var(--mark)}
+  .sheet-top{background:var(--ink);color:var(--paper);padding:12px 16px;display:flex;justify-content:space-between;align-items:center;position:relative}
+  /* Centrado sobre la barra, no entre los botones: asi Rotate no descuadra el
+     titulo y las dos hojas quedan alineadas igual pese a tener botones distintos. */
+  .sheet-top h2{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);margin:0;white-space:nowrap;
+    font-size:12px;letter-spacing:.18em;text-transform:uppercase;font-weight:600;color:var(--mark)}
   .sheet-top button{background:none;border:0;color:var(--paper);font-size:12.5px;font-weight:700;letter-spacing:.09em;cursor:pointer;text-transform:uppercase}
   .sheet-top .rotate-btn{background:rgba(255,255,255,0.1);border-radius:4px;padding:6px 12px;font-size:11px;color:var(--mark)}
   .canvas-wrap{background:#131410;display:flex;align-items:center;justify-content:center;flex:none;overflow:hidden}
@@ -102,16 +112,10 @@
   .chip{font-family:'IBM Plex Mono',monospace;font-size:11px;padding:5px 9px;border:1px solid var(--line);background:var(--card);border-radius:2px;cursor:pointer;color:var(--text)}
   .chip.on{background:var(--ink);color:var(--mark);border-color:var(--ink)}
   .chip.miss{opacity:.4}
-  .locbtn{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;
-    background:var(--card);border:1px solid var(--line);border-radius:2px;padding:11px 10px;cursor:pointer;
-    font-family:'Archivo',sans-serif;font-size:14px;color:var(--text);text-align:left}
-  .locbtn em{font-style:normal;font-family:'Archivo',sans-serif;font-size:13px;color:var(--dim);font-weight:400}
-  .form input,
-  .form textarea,
-  .form .locbtn {
-    width:100%;
-    box-sizing:border-box;
-  }
+  /* La caja la pone el bloque compartido de arriba; aqui solo va lo propio. */
+  .locbtn{display:flex;align-items:center;justify-content:space-between;gap:10px;
+    cursor:pointer;text-align:left}
+  .locbtn em{font-style:normal;font-size:13px;color:var(--dim);font-weight:400}
   .plchips{display:flex;gap:6px;overflow-x:auto;padding:9px 12px;background:#1a1b16;-webkit-overflow-scrolling:touch}
   .plchips .chip{flex:none;background:#2b2c24;border-color:#2b2c24;color:#d1d2c8}
   .plchips .chip.on{background:var(--mark);border-color:var(--mark);color:#1a1b14}
@@ -171,9 +175,9 @@
 
   <div class="foot">
     <div class="btn-row">
-      <button class="btn btn-dark" id="btnPdf">Export PDF</button>
-      <button class="btn btn-ghost" id="btnShare" style="flex:0 0 80px">Share</button>
-      <button class="btn btn-ghost" id="btnClear" style="flex:0 0 80px">Clear</button>
+      <button class="btn btn-primary" id="btnShare">Share</button>
+      <button class="btn btn-ghost" id="btnPdf">Export PDF</button>
+      <button class="btn btn-ghost" id="btnClear" style="flex:0 0 76px">Clear</button>
     </div>
   </div>
 </div>
@@ -190,7 +194,7 @@
   <div class="canvas-wrap"><canvas id="cv"></canvas></div>
   <div class="tools">
     <button class="t on" id="tDraw">Circle</button>
-    <button class="t blk" id="tBox">Black out</button>
+    <button class="t" id="tText">Text</button>
     <button class="t" id="tUndo">Undo</button>
     <button class="t" id="tClear">Clear</button>
   </div>
@@ -241,17 +245,13 @@
   /* ==========================================================
      CANONICAL ZONE LIST
      ========================================================== */
-  /* Lista por defecto mientras projects.zones no exista en Supabase. Antes esto
-     estaba cableado a un nombre de proyecto concreto, asi que cualquier otro
-     proyecto se quedaba sin chips y parecia que la funcion no estaba.        */
-  const ZONES_DEFAULT=[
-    'Site / Perimeter','Garage','Lobby','Amenity Deck',
-    'Level 02','Level 03','Level 04','Level 05','Level 06',
-    'Roof','MEP','Landscape'
-  ];
+  /* Vacio a proposito: sin lista precargada los unicos chips que aparecen son
+     las zonas que ya se teclearon en los items de este reporte, asi que CLEAR
+     se las lleva junto con los items. Aqui ira projects.zones de Supabase.  */
+  const ZONES_DEFAULT=[];
   const ZONES={};
 
-  const BUILD='2026-07-31-landwise-d';
+  const BUILD='2026-07-31-landwise-e';
   const KEY='svr_state_v1';
 
   let state={proj:'',date:'',by:'',ref:'',refAuto:true,to:'',seq:0,items:[]};
@@ -285,7 +285,7 @@
   document.documentElement.style.setProperty('--mark', BRAND.accent);
   /* Tono profundo derivado del accent para texto/acentos sobre papel claro:
      el accent puro se muestrea para barras oscuras y no contrasta en claro. */
-  const deep=hexRgb(BRAND.accent).map(function(c){ return Math.round(c*0.65); });
+  const deep=hexRgb(BRAND.accent).map(function(c){ return Math.round(c*0.70); });
   document.documentElement.style.setProperty('--mark-deep','rgb('+deep.join(',')+')');
   document.getElementById('brandLockup').src=BRAND.lockup;
 
@@ -452,6 +452,7 @@
   /* ---------------- markup canvas ---------------- */
   const cv=$('cv'), ctx=cv.getContext('2d');
   function penW(){ return Math.max(2.2, cv.width/165); }
+  function txtH(){ return Math.max(13, cv.width/22); }
 
   function rotateImage(dataUrl, degrees, cb){
     const img=new Image();
@@ -505,6 +506,17 @@
         c.fillStyle='#0a0a0a';
         c.fillRect(Math.min(m.x,m.x2)*scale, Math.min(m.y,m.y2)*scale,
                    Math.abs(m.x2-m.x)*scale, Math.abs(m.y2-m.y)*scale);
+      }else if(m.type==='text'){
+        /* Placa clara detras: sobre una foto de obra el rojo solo se pierde
+           contra cielo, hormigon o sombra segun donde caiga la etiqueta.   */
+        const fs=txtH()*scale;
+        c.font='700 '+fs+'px Archivo, sans-serif';
+        c.textBaseline='top';
+        const pad=fs*0.28, w=c.measureText(m.txt).width;
+        c.fillStyle='rgba(255,255,255,.92)';
+        c.fillRect(m.x*scale-pad, m.y*scale-pad, w+pad*2, fs*1.2+pad*2);
+        c.fillStyle='#e11d1d';
+        c.fillText(m.txt, m.x*scale, m.y*scale);
       }else{
         if(m.pts.length<2) return;
         c.strokeStyle='#e11d1d'; c.lineWidth=penW()*scale;
@@ -530,8 +542,16 @@
   function pt(e,el){ const r=el.getBoundingClientRect(); return {x:(e.clientX-r.left)*(el.width/r.width), y:(e.clientY-r.top)*(el.height/r.height)}; }
 
   cv.addEventListener('pointerdown',function(e){
-    e.preventDefault(); cv.setPointerCapture(e.pointerId);
+    e.preventDefault();
     const p=pt(e,cv);
+    /* El texto no se arrastra: se toca donde va y se escribe. prompt() bloquea
+       el hilo, asi que ni se captura el puntero ni se abre un trazo.        */
+    if(mode==='text'){
+      const t=(prompt('Label text')||'').trim();
+      if(t){ marks.push({type:'text',x:p.x,y:p.y,txt:t}); redraw(); }
+      return;
+    }
+    cv.setPointerCapture(e.pointerId);
     cur = mode==='rect' ? {type:'rect',x:p.x,y:p.y,x2:p.x,y2:p.y} : {type:'pen',pts:[p]};
   });
   cv.addEventListener('pointermove',function(e){
@@ -548,9 +568,9 @@
   });
   cv.addEventListener('pointercancel',function(){ cur=null; redraw(); });
 
-  function setMode(m){ mode=m; $('tDraw').classList.toggle('on',m==='pen'); $('tBox').classList.toggle('on',m==='rect'); }
+  function setMode(m){ mode=m; $('tDraw').classList.toggle('on',m==='pen'); $('tText').classList.toggle('on',m==='text'); }
   $('tDraw').addEventListener('click',function(){ setMode('pen'); });
-  $('tBox').addEventListener('click',function(){ setMode('rect'); });
+  $('tText').addEventListener('click',function(){ setMode('text'); });
   $('tUndo').addEventListener('click',function(){ marks.pop(); redraw(); });
   $('tClear').addEventListener('click',function(){ marks=[]; redraw(); });
   $('shCancel').addEventListener('click',function(){ $('sheet').style.display='none'; editing=null; nextPending(); });
@@ -858,8 +878,8 @@
     const proj=state.proj||'Site Visit Report';
     const list=ordered();
     const INK=[32,33,28], MARK=hexRgb(BRAND.accent), MID=[111,113,105], HAIR=[214,213,208];
-    /* acento sobre papel blanco: mismo derivado x0.65 que --mark-deep en la UI */
-    const DEEP=MARK.map(function(c){ return Math.round(c*0.65); });
+    /* acento sobre papel blanco: mismo derivado x0.70 que --mark-deep en la UI */
+    const DEEP=MARK.map(function(c){ return Math.round(c*0.70); });
     const FOOT=64;
 
     function brandbar(full){
@@ -945,8 +965,10 @@
         doc.addPage(); brandbar(false); y=78; lastZone=null; need=true;
       }
       if(need){
-        doc.setFillColor(INK[0],INK[1],INK[2]); doc.rect(M,y,W-2*M,16,'F');
-        doc.setFont('helvetica','bold'); doc.setFontSize(7); doc.setTextColor(MARK[0],MARK[1],MARK[2]);
+        /* Banda de acento con texto oscuro, igual que .zoneband en la app: en
+           una pagina clara la barra casi negra pesaba mas que la cabecera. */
+        doc.setFillColor(MARK[0],MARK[1],MARK[2]); doc.rect(M,y,W-2*M,16,'F');
+        doc.setFont('helvetica','bold'); doc.setFontSize(7); doc.setTextColor(INK[0],INK[1],INK[2]);
         doc.text(z.toUpperCase(),M+8,y+11,{charSpace:1.8});
         y+=21; lastZone=z;
       }
@@ -1034,10 +1056,13 @@
     const pdfBlob = doc.output('blob');
     const filename = getFilename();
 
-    if(navigator.share){
+    /* canShare con el archivo real: en escritorio navigator.share suele existir
+       pero rechaza archivos, y sin esta comprobacion se pierde la descarga.  */
+    const pdfFile = new File([pdfBlob], filename, {type: 'application/pdf'});
+    if(navigator.share && navigator.canShare && navigator.canShare({files:[pdfFile]})){
       navigator.share({
         title: filename,
-        files: [new File([pdfBlob], filename, {type: 'application/pdf'})]
+        files: [pdfFile]
       }).then(function(){
         flash('PDF shared');
       }).catch(function(err){
