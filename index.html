@@ -44,7 +44,7 @@
   .tally b{display:block;font-size:28px;font-weight:500;color:var(--mark-deep)}
   .tally span{display:block;font-size:8.5px;letter-spacing:.16em;color:var(--dim);margin-top:4px}
 
-  .hdr{padding:14px 18px;border-bottom:2px solid var(--line);display:grid;grid-template-columns:1fr 132px;gap:10px}
+  .hdr{padding:14px 18px;border-bottom:2px solid var(--line);display:grid;grid-template-columns:1fr 152px;gap:10px}
   label.lbl{display:block;font-size:9px;letter-spacing:.16em;text-transform:uppercase;color:var(--dim);margin-bottom:4px;font-weight:600}
   .svr input,.svr textarea,.svr select{
     width:100%;font-family:'Archivo',sans-serif;font-size:15px;color:var(--text);
@@ -148,7 +148,7 @@
     </div>
     <div>
       <label class="lbl" for="fRef">Report no.</label>
-      <input id="fRef" placeholder="Auto-fills from date">
+      <input id="fRef" placeholder="R-MMDDYY">
     </div>
     <div style="grid-column:1/-1">
       <label class="lbl" for="fTo">Issued to</label>
@@ -201,7 +201,7 @@
       <div class="chips" id="zoneChips"></div>
     </div>
     <div>
-      <label class="lbl">Location on plan</label>
+      <label class="lbl">Plan</label>
       <button class="locbtn" id="eLoc"><span id="eLocTxt">Not set</span><em>Set pin</em></button>
     </div>
     <div>
@@ -232,24 +232,11 @@
   /* ==========================================================
      FLOOR PLAN LIBRARY to be changed per project
      ========================================================== */
+  /* Vacio a proposito: la demo no carga plantas todavia. La maquinaria del pin
+     sigue intacta, solo queda dormida. Con la lista vacia el control de plano
+     se oculta y en el formulario queda la etiqueta PLAN como sitio reservado. */
   const PLAN_DIR='plans/';
-  const PLANS=[
-    {id:'101', label:'101', file:'101.jpg'},
-    {id:'102', label:'102', file:'102.jpg'},
-    {id:'103', label:'103', file:'103.jpg'},
-    {id:'103a', label:'103A', file:'103a.jpg'},
-    {id:'104', label:'104', file:'104.jpg'},
-    {id:'105', label:'105', file:'105.jpg'},
-    {id:'106', label:'106', file:'106.jpg'},
-    {id:'107', label:'107', file:'107.jpg'},
-    {id:'108', label:'108', file:'108.jpg'},
-    {id:'109', label:'109', file:'109.jpg'},
-    {id:'110', label:'110', file:'110.jpg'},
-    {id:'111', label:'111', file:'111.jpg'},
-    {id:'112', label:'112', file:'112.jpg'},
-    {id:'113', label:'113', file:'113.jpg'},
-    {id:'114', label:'114', file:'114.jpg'}
-  ];
+  const PLANS=[];
 
   /* ==========================================================
      CANONICAL ZONE LIST
@@ -264,7 +251,7 @@
   ];
   const ZONES={};
 
-  const BUILD='2026-07-31-landwise-c';
+  const BUILD='2026-07-31-landwise-d';
   const KEY='svr_state_v1';
 
   let state={proj:'',date:'',by:'',ref:'',refAuto:true,to:'',seq:0,items:[]};
@@ -376,10 +363,14 @@
     return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate());
   }
   function autoRef(dateStr){
-    return 'SVR-'+String(dateStr||todayLocal()).replace(/-/g,'')+'-A';
+    const d=String(dateStr||todayLocal()).split('-');   // YYYY-MM-DD
+    return 'R-'+d[1]+d[2]+d[0].slice(2);                // R-MMDDYY
   }
   function planById(id){ for(let i=0;i<PLANS.length;i++) if(PLANS[i].id===id) return PLANS[i]; return null; }
   function planLabel(p){ const d=p&&planById(p.id); return d?d.label:(p?p.id:''); }
+  /* Sin plantas cargadas el boton abriria una hoja vacia: se oculta y queda
+     solo la etiqueta PLAN reservando el sitio.                              */
+  if(!PLANS.length) $('eLoc').style.display='none';
 
   (async function(){
     const s=await store.get();
@@ -391,7 +382,9 @@
     state.items.forEach(function(it){ if(typeof it.no!=='number'){ maxNo++; it.no=maxNo; } });
     state.seq=maxNo;
 
-    if(!state.ref){ state.ref=autoRef(state.date); state.refAuto=true; }
+    /* Si nunca se edito a mano, se regenera en cada arranque: asi el ref sigue
+       al formato vigente y no se queda pegado un esquema viejo en localStorage. */
+    if(!state.ref || state.refAuto){ state.ref=autoRef(state.date); state.refAuto=true; }
     $('fProj').value=state.proj||''; $('fDate').value=state.date;
     $('fBy').value=state.by||''; $('fRef').value=state.ref||''; $('fTo').value=state.to||'';
     store.set(state);
@@ -870,29 +863,30 @@
     const FOOT=64;
 
     function brandbar(full){
-      doc.setFillColor(INK[0],INK[1],INK[2]);
-      doc.rect(0,0,W, full?96:54,'F');
+      /* Cabecera clara, igual que la masthead de la app: papel blanco y filetes
+         en vez de barra oscura. Sobre blanco el logo ya no necesita placa (el
+         keyOut le dejo alfa) y el acento va en su tono profundo, porque el
+         accent puro solo contrasta contra fondo oscuro.                      */
       /* Alto fijo, ancho derivado de la proporcion real: un lockup ancho ya no
-         sale aplastado en el hueco cuadrado. La placa blanca detras es lo que
-         hace legible un logo multicolor sobre la barra oscura.               */
+         sale aplastado en el hueco cuadrado.                                 */
       const lh=17.5, lw=Math.min(Math.round(lh*logoAR*10)/10, 120), lx=M, ly=full?30:18;
       if(logoPng){
-        try{
-          doc.setFillColor(255,255,255);
-          doc.roundedRect(lx-4, ly-4, lw+8, lh+8, 2, 2, 'F');
-          doc.addImage(logoPng,'PNG',lx, ly, lw, lh);
-        }catch(e){}
+        try{ doc.addImage(logoPng,'PNG',lx, ly, lw, lh); }catch(e){}
       }
       doc.setFont('helvetica','bold'); doc.setFontSize(9.5);
-      doc.setTextColor(MARK[0],MARK[1],MARK[2]);
+      doc.setTextColor(DEEP[0],DEEP[1],DEEP[2]);
       doc.text(BRAND.wordmark, lx+lw+13, full?43.5:31.5, {charSpace:3.2});
+      doc.setDrawColor(HAIR[0],HAIR[1],HAIR[2]);
       if(full){
-        doc.setFont('helvetica','bold'); doc.setFontSize(17); doc.setTextColor(245,244,241);
-        doc.text('Site Visit Report', M, 78);
-        doc.setFont('helvetica','normal'); doc.setFontSize(8.5); doc.setTextColor(MARK[0],MARK[1],MARK[2]);
-        doc.text('FIELD OBSERVATION RECORD', W-M, 78, {align:'right', charSpace:1.6});
+        doc.line(M,58,W-M,58);
+        doc.setFont('helvetica','bold'); doc.setFontSize(17); doc.setTextColor(INK[0],INK[1],INK[2]);
+        doc.text('Site Visit Report', M, 82);
+        doc.setFont('helvetica','normal'); doc.setFontSize(8.5); doc.setTextColor(DEEP[0],DEEP[1],DEEP[2]);
+        doc.text('FIELD OBSERVATION RECORD', W-M, 82, {align:'right', charSpace:1.6});
+        doc.line(M,96,W-M,96);
       }else{
-        doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(152,154,146);
+        doc.line(M,54,W-M,54);
+        doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(MID[0],MID[1],MID[2]);
         const t=proj+(state.ref?'   /   '+state.ref:'');
         doc.text(t, W-M, 31.5, {align:'right'});
       }
@@ -1080,7 +1074,7 @@
 
   function getFilename(){
     const proj = (state.proj || 'SiteVisit').replace(/[^a-z0-9]/gi,'_');
-    const ref = (state.ref || 'SVR').replace(/[^a-z0-9]/gi,'_');
+    const ref = (state.ref || autoRef(state.date)).replace(/[^a-z0-9]/gi,'_');
     const date = state.date || todayLocal();
     return proj + '_' + ref + '_' + date + '.pdf';
   }
