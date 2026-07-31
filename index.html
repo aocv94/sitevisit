@@ -6,6 +6,10 @@
   @import url('https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
 
   :root{
+    /* La app es de tema claro a proposito: masthead oscura sobre papel claro.
+       color-scheme fija tambien los controles nativos (el date picker), que si
+       no salen oscuros cuando el sistema esta en modo oscuro.                 */
+    color-scheme: light;
     --mark:#7ba7af;
     --ink:#14202b;
     --paper:#f5f4f1;
@@ -18,79 +22,6 @@
     --border:#d6d5d0;
   }
 
-  @media (prefers-color-scheme: dark){
-    :root{
-      --mark:#7ba7af;
-      --ink:#e8e6e0;
-      --paper:#1a1a1a;
-      --line:#333333;
-      --dim:#999999;
-      --flag:#e8554a;
-      --bg:#1a1a1a;
-      --text:#e8e6e0;
-      --card:#2a2a2a;
-      --border:#444444;
-    }
-    .svr input,.svr textarea,.svr select{
-      background:#2a2a2a;
-      color:#e8e6e0;
-      border-color:#444444;
-    }
-    .chip{
-      background:#2a2a2a;
-      border-color:#444444;
-      color:#e8e6e0;
-    }
-    .chip.on{
-      background:var(--ink);
-      color:var(--mark);
-      border-color:var(--ink);
-    }
-    .locbtn{
-      background:#2a2a2a;
-      border-color:#444444;
-      color:#e8e6e0;
-    }
-    .foot{
-      background:#1a1a1a;
-      border-top-color:#333333;
-    }
-    .sheet{
-      background:#1a1a1a;
-    }
-    .hdr{
-      border-bottom-color:#333333;
-    }
-    .row{
-      border-bottom-color:#333333;
-    }
-    .row img{
-      border-color:#444444;
-      background:#2a2a2a;
-    }
-    .empty strong{
-      color:#e8e6e0;
-    }
-    .zoneband{
-      background:#2a2a2a;
-      color:var(--mark);
-    }
-    .mast{
-      background:#0d0d0d;
-      color:#e8e6e0;
-    }
-    .mast .sub{
-      color:#666666;
-    }
-    .btn-ghost{
-      color:#e8e6e0;
-      border-color:#444444;
-    }
-    .btn-dark{
-      background:#2a2a2a;
-      color:#e8e6e0;
-    }
-  }
 
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
   .svr{
@@ -205,7 +136,7 @@
   <div class="hdr">
     <div>
       <label class="lbl" for="fProj">Project</label>
-      <input id="fProj" placeholder="CORA Merrick Park">
+      <input id="fProj" placeholder="Name or address">
     </div>
     <div>
       <label class="lbl" for="fDate">Visit date</label>
@@ -213,15 +144,15 @@
     </div>
     <div>
       <label class="lbl" for="fBy">Observed by</label>
-      <input id="fBy" placeholder="Alfonso Orozco">
+      <input id="fBy" placeholder="Your name">
     </div>
     <div>
       <label class="lbl" for="fRef">Report no.</label>
-      <input id="fRef" placeholder="SVR-20260721-A">
+      <input id="fRef" placeholder="Auto-fills from date">
     </div>
     <div style="grid-column:1/-1">
       <label class="lbl" for="fTo">Issued to</label>
-      <input id="fTo" placeholder="Winmar Construction - Luis Alfonzo">
+      <input id="fTo" placeholder="Company - Contact name">
     </div>
   </div>
 
@@ -266,7 +197,7 @@
   <div class="form">
     <div>
       <label class="lbl" for="eZone">Zone / location</label>
-      <input id="eZone" placeholder="Building 12">
+      <input id="eZone" placeholder="Zone or area">
       <div class="chips" id="zoneChips"></div>
     </div>
     <div>
@@ -275,7 +206,7 @@
     </div>
     <div>
       <label class="lbl" for="eCmt">Observation</label>
-      <textarea id="eCmt" placeholder="Palm needs to move approx 2ft east"></textarea>
+      <textarea id="eCmt" placeholder="What you observed"></textarea>
     </div>
   </div>
 </div>
@@ -323,15 +254,17 @@
   /* ==========================================================
      CANONICAL ZONE LIST
      ========================================================== */
-  const ZONES={
-    'cora merrick park':[
-      'Site / Perimeter','Garage','Lobby','Amenity Deck',
-      'Level 02','Level 03','Level 04','Level 05','Level 06',
-      'Roof','MEP','Landscape'
-    ]
-  };
+  /* Lista por defecto mientras projects.zones no exista en Supabase. Antes esto
+     estaba cableado a un nombre de proyecto concreto, asi que cualquier otro
+     proyecto se quedaba sin chips y parecia que la funcion no estaba.        */
+  const ZONES_DEFAULT=[
+    'Site / Perimeter','Garage','Lobby','Amenity Deck',
+    'Level 02','Level 03','Level 04','Level 05','Level 06',
+    'Roof','MEP','Landscape'
+  ];
+  const ZONES={};
 
-  const BUILD='2026-07-30-landwise';
+  const BUILD='2026-07-31-landwise-b';
   const KEY='svr_state_v1';
 
   let state={proj:'',date:'',by:'',ref:'',refAuto:true,to:'',seq:0,items:[]};
@@ -677,7 +610,7 @@
 
   function projZones(){
     const k=(state.proj||'').trim().toLowerCase();
-    return ZONES[k]||[];
+    return ZONES[k]||ZONES_DEFAULT;
   }
   function buildChips(){
     const box=$('zoneChips'); box.innerHTML='';
