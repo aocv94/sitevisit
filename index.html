@@ -151,7 +151,7 @@
       <input id="fBy" placeholder="Your name">
     </div>
     <div>
-      <label class="lbl" for="fRef">Report no.</label>
+      <label class="lbl" for="fRef">#</label>
       <input id="fRef" placeholder="R-MMDDYY">
     </div>
     <div style="grid-column:1/-1">
@@ -902,7 +902,10 @@
         doc.setFont('helvetica','bold'); doc.setFontSize(17); doc.setTextColor(INK[0],INK[1],INK[2]);
         doc.text('Site Visit Report', M, 82);
         doc.setFont('helvetica','normal'); doc.setFontSize(8.5); doc.setTextColor(DEEP[0],DEEP[1],DEEP[2]);
-        doc.text('FIELD OBSERVATION RECORD', W-M, 82, {align:'right', charSpace:1.6});
+        /* jsPDF calcula el ancho de align:'right' sin contar charSpace, asi que
+           el texto espaciado se salia del margen derecho. Se coloca a mano.  */
+        const fo='FIELD OBSERVATION RECORD', foCS=1.6;
+        doc.text(fo, W-M-(doc.getTextWidth(fo)+fo.length*foCS), 82, {charSpace:foCS});
         doc.line(M,96,W-M,96);
       }else{
         doc.line(M,54,W-M,54);
@@ -917,7 +920,7 @@
         ['PROJECT', proj],
         ['VISIT DATE', state.date||''],
         ['OBSERVED BY', state.by||''],
-        ['REPORT NO.', state.ref||'-']
+        ['#', state.ref||'-']
       ];
       const cw=(W-2*M)/4;
       cols.forEach(function(c,i){
