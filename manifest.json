@@ -1,5 +1,5 @@
 {
-  "name": "Constellation Site Visit Report",
+  "name": "Landwise Site Visit Report",
   "short_name": "Site Visit",
   "start_url": "./index.html",
   "scope": "./",
@@ -8,8 +8,8 @@
   "background_color": "#f5f4f1",
   "theme_color": "#14202b",
   "icons": [
-    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
-    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
-    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+    { "src": "brand/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "brand/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "brand/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
   ]
 }

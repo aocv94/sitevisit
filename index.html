@@ -101,8 +101,10 @@
   .svr h1,.svr h2{margin:0}
 
   .mast{background:var(--ink);color:var(--paper);padding:16px 18px}
-  .mast .brandrow{display:flex;align-items:center;gap:10px;padding-bottom:12px;border-bottom:1px solid rgba(123,167,175,.35)}
+  .mast .brandrow{display:flex;align-items:center;gap:10px;padding-bottom:12px;border-bottom:1px solid rgba(255,255,255,.18)}
   .mast svg{width:20px;height:auto;flex:none}
+  /* placa blanca: los logos de cliente vienen sobre fondo blanco y la masthead es oscura */
+  .mast .lockup{height:30px;width:auto;display:block;background:#fff;padding:5px 9px;border-radius:3px}
   .mast .wm{font-size:12px;letter-spacing:.34em;text-transform:uppercase;font-weight:600;color:var(--mark)}
   .mast .btm{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;padding-top:12px}
   .mast h1{font-size:18px;font-weight:800;letter-spacing:-.015em;line-height:1.15}
@@ -189,8 +191,7 @@
 <div class="svr">
   <div class="mast">
     <div class="brandrow">
-      <svg viewBox="0 0 360 331.73" xmlns="http://www.w3.org/2000/svg"><path fill="#7ba7af" d="M246.61,0H113.39L0,331.73h360L246.61,0ZM177.17,21.57h5.66l87.73,257.02H89.43L177.17,21.57Z"/></svg>
-      <span class="wm">Constellation</span>
+      <img id="brandLockup" class="lockup" alt="">
     </div>
     <div class="btm">
       <div>
@@ -330,7 +331,7 @@
     ]
   };
 
-  const BUILD='2026-07-28-a';
+  const BUILD='2026-07-30-landwise';
   const KEY='svr_state_v1';
 
   let state={proj:'',date:'',by:'',ref:'',refAuto:true,to:'',seq:0,items:[]};
@@ -340,16 +341,58 @@
   let plDraft=null, plImg=null, plId=null;
   let rotation=0; // Track rotation in degrees
 
-  const LOGO_D='M246.61,0H113.39L0,331.73h360L246.61,0ZM177.17,21.57h5.66l87.73,257.02H89.43L177.17,21.57Z';
-  let logoPng=null;
-  function makeLogo(hex,scale){
+  /* ---------------- Marca ----------------
+     Un solo objeto controla toda la identidad. Misma forma que la tabla orgs
+     de supabase/schema.sql, para que conectarlo despues sea reemplazar esta
+     constante por la fila que devuelva la consulta, no volver a cablear.  */
+  const BRAND={
+    name:      'Landwise Design',
+    wordmark:  'LANDWISE DESIGN',            // barra del PDF
+    lockup:    'brand/landwise-lockup.jpg',  // horizontal, masthead
+    mark:      'brand/landwise-mark.jpg',    // cuadrado, PDF
+    accent:    '#a0b028',                    // muestreado del propio logo
+    disclaimer:[
+      'Observations recorded during a general site visit. Not an exhaustive inspection and not a directive to change contract scope, schedule, or cost.',
+      'Neither the inclusion nor the omission of an item constitutes approval, acceptance, or rejection of the Work.'
+    ]
+  };
+
+  function hexRgb(h){
+    h=h.replace('#','');
+    return [parseInt(h.slice(0,2),16),parseInt(h.slice(2,4),16),parseInt(h.slice(4,6),16)];
+  }
+
+  document.documentElement.style.setProperty('--mark', BRAND.accent);
+  document.getElementById('brandLockup').src=BRAND.lockup;
+
+  /* Los logos de cliente llegan en JPG, sin canal alfa: traen el fondo blanco
+     quemado. Se vuelve transparente aqui para que el mismo archivo sirva sobre
+     fondo claro u oscuro. El umbral va sobre el canal minimo, asi que el verde
+     y el gris del logo nunca se tocan; la franja 226-247 da el antialias.     */
+  let logoPng=null, logoAR=1;
+  function keyOutWhite(img){
     const c=document.createElement('canvas');
-    c.width=Math.round(360*scale); c.height=Math.round(331.73*scale);
-    const x=c.getContext('2d'); x.scale(scale,scale);
-    x.fillStyle=hex; x.fill(new Path2D(LOGO_D));
+    c.width=img.naturalWidth; c.height=img.naturalHeight;
+    const x=c.getContext('2d');
+    x.drawImage(img,0,0);
+    const d=x.getImageData(0,0,c.width,c.height), p=d.data;
+    for(let i=0;i<p.length;i+=4){
+      const m=Math.min(p[i],p[i+1],p[i+2]);
+      if(m>=248) p[i+3]=0;
+      else if(m>225) p[i+3]=Math.round(255*(248-m)/22);
+    }
+    x.putImageData(d,0,0);
     return c.toDataURL('image/png');
   }
-  try{ logoPng=makeLogo('#7ba7af',0.6); }catch(e){ logoPng=null; }
+  (function(){
+    const img=new Image();
+    img.onload=function(){
+      try{ logoPng=keyOutWhite(img); logoAR=img.naturalWidth/img.naturalHeight; }
+      catch(e){ logoPng=null; }
+    };
+    img.onerror=function(){ logoPng=null; };
+    img.src=BRAND.mark;
+  })();
 
   const store={
     get:async function(){
@@ -884,16 +927,26 @@
     const W=612, H=792, M=54;
     const proj=state.proj||'Site Visit Report';
     const list=ordered();
-    const INK=[20,32,43], MARK=[123,167,175], MID=[109,118,128], HAIR=[214,213,208];
+    const INK=[20,32,43], MARK=hexRgb(BRAND.accent), MID=[109,118,128], HAIR=[214,213,208];
     const FOOT=64;
 
     function brandbar(full){
       doc.setFillColor(INK[0],INK[1],INK[2]);
       doc.rect(0,0,W, full?96:54,'F');
-      if(logoPng){ try{ doc.addImage(logoPng,'PNG',M, full?30:18, 19, 17.5); }catch(e){} }
+      /* Alto fijo, ancho derivado de la proporcion real: un lockup ancho ya no
+         sale aplastado en el hueco cuadrado. La placa blanca detras es lo que
+         hace legible un logo multicolor sobre la barra oscura.               */
+      const lh=17.5, lw=Math.min(Math.round(lh*logoAR*10)/10, 120), lx=M, ly=full?30:18;
+      if(logoPng){
+        try{
+          doc.setFillColor(255,255,255);
+          doc.roundedRect(lx-4, ly-4, lw+8, lh+8, 2, 2, 'F');
+          doc.addImage(logoPng,'PNG',lx, ly, lw, lh);
+        }catch(e){}
+      }
       doc.setFont('helvetica','bold'); doc.setFontSize(9.5);
       doc.setTextColor(MARK[0],MARK[1],MARK[2]);
-      doc.text('CONSTELLATION', M+28, full?43.5:31.5, {charSpace:3.2});
+      doc.text(BRAND.wordmark, lx+lw+13, full?43.5:31.5, {charSpace:3.2});
       if(full){
         doc.setFont('helvetica','bold'); doc.setFontSize(17); doc.setTextColor(245,244,241);
         doc.text('Site Visit Report', M, 78);
@@ -1029,8 +1082,8 @@
       doc.setPage(p);
       doc.setDrawColor(HAIR[0],HAIR[1],HAIR[2]); doc.line(M,H-50,W-M,H-50);
       doc.setFont('helvetica','normal'); doc.setFontSize(6.5); doc.setTextColor(150,158,166);
-      doc.text('Observations recorded during a general site visit. Not an exhaustive inspection and not a directive to change contract scope, schedule, or cost.',M,H-38);
-      doc.text('Neither the inclusion nor the omission of an item constitutes approval, acceptance, or rejection of the Work.',M,H-29);
+      doc.text(BRAND.disclaimer[0],M,H-38);
+      doc.text(BRAND.disclaimer[1],M,H-29);
       doc.text('Page '+p+' of '+tot,W-M,H-29,{align:'right'});
     }
 

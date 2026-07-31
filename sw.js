@@ -1,4 +1,4 @@
-/* Constellation Site Visit Report - offline worker
+/* Site Visit Report - offline worker
 
    index.html is served NETWORK-FIRST with a 2.5s timeout, so a new deploy
    is picked up automatically on the next online launch. No version bump
@@ -42,7 +42,9 @@ var TIMEOUT = 2500;
 var SHELL = [
   './index.html',
   './manifest.json',
-  './jspdf.umd.min.js'
+  './jspdf.umd.min.js',
+  './brand/landwise-lockup.jpg',
+  './brand/landwise-mark.jpg'
 ];
 
 /* Best-effort. Keep in sync with PLANS[] in index.html.
