@@ -51,6 +51,31 @@ export interface Project {
   created_at: string;
 }
 
+/**
+ * Lámina de plano de un proyecto.
+ *
+ * Ojo con `id` vs `code`: `code` es lo que escribe el líder ('103a') y solo
+ * es único dentro de su proyecto; `id` es el uuid y es lo que guarda el pin
+ * de un ítem. Renombrar el código no mueve los pines ya colocados.
+ */
+export interface PlanRow {
+  id: string;
+  project_id: string;
+  code: string;
+  label: string;
+  /** Ruta en el bucket: `<org_id>/<project_id>/<archivo>`. */
+  storage_path: string;
+  sort: number;
+}
+
+/** Persona asignada a una obra concreta. */
+export interface ProjectMember {
+  project_id: string;
+  user_id: string;
+  assigned_at: string;
+  profile: Profile;
+}
+
 /** Membresía con la empresa ya resuelta, que es como la consume la UI. */
 export interface MembershipWithOrg extends Membership {
   org: Org;
