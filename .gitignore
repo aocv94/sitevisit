@@ -1,6 +1,9 @@
 node_modules/
 dist/
 dev-dist/
+# Cache de dependencias de Vite. Normalmente cae en node_modules/.vite, pero
+# acaba en la raiz si el dev server se lanza desde otro directorio.
+.vite/
 *.local
 .env
 .env.*
@@ -9,3 +12,6 @@ dev-dist/
 *.tsbuildinfo
 .vercel/
 coverage/
+# Estado local de la CLI de Supabase: enlace al proyecto y cadena de
+# conexion del pooler. Es de cada maquina, no del repo.
+supabase/.temp/

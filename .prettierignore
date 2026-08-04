@@ -1,0 +1,7 @@
+dist
+dev-dist
+node_modules
+public/plans
+package-lock.json
+# Deno: su propio formateador, otras convenciones.
+supabase/functions

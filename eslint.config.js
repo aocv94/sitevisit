@@ -5,7 +5,9 @@ import reactHooks from 'eslint-plugin-react-hooks';
 import reactRefresh from 'eslint-plugin-react-refresh';
 
 export default tseslint.config(
-  { ignores: ['dist', 'dev-dist', 'node_modules', 'public'] },
+  // supabase/functions corre en Deno, no en el navegador: importa por URL y
+  // usa globales que este eslint no conoce. Se revisa con `deno check`.
+  { ignores: ['dist', 'dev-dist', 'node_modules', 'public', 'supabase/functions'] },
   {
     files: ['**/*.{ts,tsx}'],
     extends: [js.configs.recommended, ...tseslint.configs.recommended],
