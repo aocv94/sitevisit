@@ -1,8 +1,8 @@
-/* Site Visit Report - offline worker
+/* Site Visit Report + Daily Log - offline worker
 
-   index.html is served NETWORK-FIRST with a 2.5s timeout, so a new deploy
-   is picked up automatically on the next online launch. No version bump
-   needed for normal edits.
+   The documents (index.html, daily.html) are served NETWORK-FIRST with a
+   2.5s timeout, so a new deploy is picked up automatically on the next
+   online launch. No version bump needed for normal edits.
 
    Everything else is CACHE-FIRST, so the app opens with no signal.
 
@@ -21,9 +21,13 @@
        the worker root scope.
 
      /(index.html)?            max-age=0, must-revalidate
+     /daily.html               max-age=0, must-revalidate
      /manifest.json            max-age=0, must-revalidate
+     /manifest-daily.json      max-age=0, must-revalidate
        Always revalidate. This is the floor that the network-first +
-       2.5s timeout above is built on.
+       2.5s timeout above is built on. Every document and every manifest
+       needs a rule here - a page missing from this list is the one that
+       goes stale on an installed PWA.
 
      /plans/(.*)               max-age=0, must-revalidate
      /jspdf.umd.min.js         max-age=0, must-revalidate
@@ -36,25 +40,28 @@
        One year, no revalidation. Safe because if the icons change, the
        filename changes.
 */
-var VERSION = 'svr-v1';
+var VERSION = 'svr-v2';
 var TIMEOUT = 2500;
 
+/* Los dos documentos y sus manifiestos. daily.html usa la marca vectorial de
+   Constellation, que va inline en el propio HTML: no hay assets de marca que
+   precachear para esa pagina. Los JPG son solo de la demo de Landwise.     */
 var SHELL = [
   './index.html',
+  './daily.html',
   './manifest.json',
+  './manifest-daily.json',
   './jspdf.umd.min.js',
   './brand/landwise-lockup.jpg',
   './brand/landwise-mark.jpg'
 ];
 
 /* Best-effort. Keep in sync with PLANS[] in index.html.
-   A missing file is skipped rather than failing the install. */
-var PLANS = [
-  './plans/101.jpg', './plans/102.jpg', './plans/103.jpg', './plans/103a.jpg',
-  './plans/104.jpg', './plans/105.jpg', './plans/106.jpg', './plans/107.jpg',
-  './plans/108.jpg', './plans/109.jpg', './plans/110.jpg', './plans/111.jpg',
-  './plans/112.jpg', './plans/113.jpg', './plans/114.jpg'
-];
+   A missing file is skipped rather than failing the install.
+   Vacio a proposito: PLANS[] tambien esta vacio y los 15 JPG de plantas ya
+   no estan en el repo, asi que listarlos eran 15 peticiones fallidas en cada
+   install. daily.html no usa plantas.                                      */
+var PLANS = [];
 
 self.addEventListener('install', function(e){
   e.waitUntil(
@@ -81,11 +88,19 @@ self.addEventListener('activate', function(e){
 function isDoc(req, url){
   return req.mode === 'navigate' ||
          url.pathname === '/' ||
-         /index\.html$/.test(url.pathname);
+         /index\.html$/.test(url.pathname) ||
+         /daily\.html$/.test(url.pathname);
+}
+
+/* Sin esto el fallback offline era siempre index.html, asi que abrir la
+   bitacora sin cobertura mostraba el reporte de visita: la pagina equivocada,
+   no una version vieja de la correcta.                                     */
+function docFallback(url){
+  return /daily\.html$/.test(url.pathname) ? './daily.html' : './index.html';
 }
 
 /* network, but give up fast - a garage with one bar is worse than no bars */
-function networkFirst(req){
+function networkFirst(req, url){
   return caches.open(VERSION).then(function(cache){
     var net = new Promise(function(resolve, reject){
       var done = false;
@@ -103,7 +118,7 @@ function networkFirst(req){
     });
     return net.catch(function(){
       return cache.match(req).then(function(hit){
-        return hit || cache.match('./index.html');
+        return hit || cache.match(docFallback(url));
       });
     });
   });
@@ -133,5 +148,5 @@ self.addEventListener('fetch', function(e){
     return;
   }
 
-  e.respondWith(isDoc(req, url) ? networkFirst(req) : cacheFirst(req));
+  e.respondWith(isDoc(req, url) ? networkFirst(req, url) : cacheFirst(req));
 });
