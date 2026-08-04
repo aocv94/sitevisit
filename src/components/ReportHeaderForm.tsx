@@ -1,6 +1,18 @@
 import { useReport } from '@/state/reportContext';
+import type { Project } from '@/types/db';
 
-export function ReportHeaderForm() {
+interface Props {
+  projects: readonly Project[];
+  activeProjectId: string;
+  onSelectProject(id: string): void;
+}
+
+/**
+ * Cabecera del reporte. El proyecto ya no se escribe a mano: se elige, y de
+ * él salen las zonas y las láminas. Cada proyecto guarda su propio reporte,
+ * así que cambiar aquí cambia la lista entera de abajo.
+ */
+export function ReportHeaderForm({ projects, activeProjectId, onSelectProject }: Props) {
   const { state, updateHeader } = useReport();
 
   return (
@@ -9,12 +21,17 @@ export function ReportHeaderForm() {
         <label className="lbl" htmlFor="fProj">
           Project
         </label>
-        <input
+        <select
           id="fProj"
-          value={state.proj}
-          placeholder="CORA Merrick Park"
-          onChange={(e) => updateHeader({ proj: e.target.value })}
-        />
+          value={activeProjectId}
+          onChange={(e) => onSelectProject(e.target.value)}
+        >
+          {projects.map((project) => (
+            <option key={project.id} value={project.id}>
+              {project.name}
+            </option>
+          ))}
+        </select>
       </div>
       <div>
         <label className="lbl" htmlFor="fDate">
@@ -42,7 +59,7 @@ export function ReportHeaderForm() {
         <label className="lbl" htmlFor="fRef">
           Report no.
         </label>
-        {/* Escribir aqui desactiva la autogeneracion a partir de la fecha. */}
+        {/* Escribir aquí desactiva la autogeneración a partir de la fecha. */}
         <input
           id="fRef"
           value={state.ref}

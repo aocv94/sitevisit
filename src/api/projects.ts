@@ -3,6 +3,22 @@ import type { Project } from '@/types/db';
 
 const COLUMNS = 'id, org_id, name, zones, created_at';
 
+/**
+ * Proyectos en los que quien pregunta puede trabajar, de todas sus empresas.
+ *
+ * No lleva filtro por usuario a proposito: la policy `project_read` ya
+ * devuelve los de un lider y solo los asignados a un colaborador. Filtrar
+ * aqui ademas seria duplicar la regla en dos sitios que se desincronizan.
+ */
+export async function listAccessibleProjects(): Promise<Project[]> {
+  const { data, error } = await getSupabase()
+    .from('projects')
+    .select(COLUMNS)
+    .order('name', { ascending: true });
+  if (error) throw new Error(error.message);
+  return (data ?? []) as Project[];
+}
+
 export async function listProjects(orgId: string): Promise<Project[]> {
   const { data, error } = await getSupabase()
     .from('projects')

@@ -5,9 +5,10 @@ import { createProject, deleteProject, DEFAULT_ZONES, listProjects } from '@/api
 import { useAuth } from '@/auth/authContext';
 import { InviteForm } from '@/components/InviteForm';
 import { MemberTable } from '@/components/MemberTable';
+import { ProjectDetail } from '@/components/ProjectDetail';
 import { Shell } from '@/components/Shell';
 import { useAsyncData } from '@/hooks/useAsyncData';
-import type { Org, OrgRole } from '@/types/db';
+import type { Org, OrgMember, OrgRole, Project } from '@/types/db';
 
 /** Un líder reparte estos dos. Nombrar a otro líder es cosa del dueño de la app. */
 const LEADER_ASSIGNABLE: OrgRole[] = ['admin', 'member'];
@@ -23,12 +24,12 @@ export function LeaderDashboard() {
   }, [isAppOwner, leaderOrgs]);
 
   const orgs = useAsyncData(loadOrgs, [isAppOwner, leaderOrgs]);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedOrgId, setSelectedOrgId] = useState<string | null>(null);
 
   const active = useMemo(() => {
     const list = orgs.data ?? [];
-    return list.find((org) => org.id === selectedId) ?? list[0] ?? null;
-  }, [orgs.data, selectedId]);
+    return list.find((org) => org.id === selectedOrgId) ?? list[0] ?? null;
+  }, [orgs.data, selectedOrgId]);
 
   const assignable = isAppOwner
     ? (['owner', ...LEADER_ASSIGNABLE] as OrgRole[])
@@ -41,7 +42,7 @@ export function LeaderDashboard() {
         orgs.data && orgs.data.length > 1 ? (
           <select
             value={active?.id ?? ''}
-            onChange={(event) => setSelectedId(event.target.value)}
+            onChange={(event) => setSelectedOrgId(event.target.value)}
             aria-label="Empresa"
           >
             {orgs.data.map((org) => (
@@ -58,89 +59,141 @@ export function LeaderDashboard() {
       {!orgs.loading && !active && <p className="adm-muted">No diriges ninguna empresa todavía.</p>}
 
       {active && (
-        <>
-          <ProjectsSection key={`p-${active.id}`} org={active} />
-          <section className="adm-section">
-            <h2>Equipo</h2>
-            <p className="adm-muted">
-              Quien invites recibirá un correo con un enlace para elegir su propia contraseña. Solo
-              verá los proyectos de {active.name}.
-            </p>
-            <TeamSection
-              key={`t-${active.id}`}
-              org={active}
-              assignableRoles={assignable}
-              currentUserId={session?.user.id ?? null}
-            />
-          </section>
-        </>
+        <OrgWorkspace
+          key={active.id}
+          org={active}
+          assignableRoles={assignable}
+          currentUserId={session?.user.id ?? null}
+        />
       )}
     </Shell>
   );
 }
 
-function ProjectsSection({ org }: { org: Org }) {
-  const load = useCallback(() => listProjects(org.id), [org.id]);
-  const projects = useAsyncData(load, [org.id]);
+function OrgWorkspace({
+  org,
+  assignableRoles,
+  currentUserId,
+}: {
+  org: Org;
+  assignableRoles: OrgRole[];
+  currentUserId: string | null;
+}) {
+  const loadProjects = useCallback(() => listProjects(org.id), [org.id]);
+  const projects = useAsyncData(loadProjects, [org.id]);
 
-  async function remove(id: string, name: string) {
+  // El equipo se carga una vez aquí: lo necesitan la sección de personas y
+  // también la de asignación a obra.
+  const loadMembers = useCallback(() => listOrgMembers(org.id), [org.id]);
+  const members = useAsyncData(loadMembers, [org.id]);
+
+  const [openProjectId, setOpenProjectId] = useState<string | null>(null);
+  const openProject = useMemo(
+    () => (projects.data ?? []).find((p) => p.id === openProjectId) ?? null,
+    [projects.data, openProjectId]
+  );
+
+  async function remove(project: Project) {
     const ok = window.confirm(
-      `¿Borrar el proyecto "${name}"? Se llevará por delante sus planos y sus reportes.`
+      `¿Borrar el proyecto "${project.name}"? Se llevará por delante sus planos y sus reportes.`
     );
     if (!ok) return;
-    await deleteProject(id);
+    await deleteProject(project.id);
+    if (openProjectId === project.id) setOpenProjectId(null);
     await projects.reload();
   }
 
   return (
-    <section className="adm-section">
-      <h2>Proyectos</h2>
-      <NewProjectForm orgId={org.id} onCreated={() => void projects.reload()} />
+    <>
+      <section className="adm-section">
+        <h2>Proyectos</h2>
+        <NewProjectForm orgId={org.id} onCreated={() => void projects.reload()} />
 
-      {projects.loading && <p className="adm-muted">Cargando…</p>}
-      {projects.error && <p className="adm-error">{projects.error}</p>}
-      {projects.data && projects.data.length === 0 && (
-        <p className="adm-muted">Ningún proyecto todavía.</p>
-      )}
-      {projects.data && projects.data.length > 0 && (
-        <div className="adm-table-wrap">
-          <table className="adm-table">
-            <thead>
-              <tr>
-                <th>Proyecto</th>
-                <th>Zonas</th>
-                <th />
-              </tr>
-            </thead>
-            <tbody>
-              {projects.data.map((project) => (
-                <tr key={project.id}>
-                  <td>
-                    <strong>{project.name}</strong>
-                  </td>
-                  <td>
-                    {/* El orden de las zonas es el orden en que se agrupan
-                        los items en la lista y en el PDF. */}
-                    <span className="adm-muted">
-                      {project.zones.length ? project.zones.join(' · ') : 'Sin zonas'}
-                    </span>
-                  </td>
-                  <td className="adm-cell-actions">
-                    <button
-                      className="adm-linklike adm-danger"
-                      type="button"
-                      onClick={() => void remove(project.id, project.name)}
-                    >
-                      Borrar
-                    </button>
-                  </td>
+        {projects.loading && <p className="adm-muted">Cargando…</p>}
+        {projects.error && <p className="adm-error">{projects.error}</p>}
+        {projects.data && projects.data.length === 0 && (
+          <p className="adm-muted">Ningún proyecto todavía.</p>
+        )}
+        {projects.data && projects.data.length > 0 && (
+          <div className="adm-table-wrap">
+            <table className="adm-table">
+              <thead>
+                <tr>
+                  <th>Proyecto</th>
+                  <th>Zonas</th>
+                  <th />
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {projects.data.map((project) => (
+                  <tr key={project.id}>
+                    <td>
+                      <button
+                        className="adm-linklike"
+                        type="button"
+                        onClick={() =>
+                          setOpenProjectId(openProjectId === project.id ? null : project.id)
+                        }
+                      >
+                        <strong>{project.name}</strong>
+                      </button>
+                    </td>
+                    <td>
+                      <span className="adm-muted">
+                        {project.zones.length ? project.zones.join(' · ') : 'Sin zonas'}
+                      </span>
+                    </td>
+                    <td className="adm-cell-actions">
+                      <button
+                        className="adm-linklike adm-danger"
+                        type="button"
+                        onClick={() => void remove(project)}
+                      >
+                        Borrar
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
+
+      {openProject && (
+        <ProjectDetail
+          key={openProject.id}
+          project={openProject}
+          orgMembers={members.data ?? []}
+          onProjectChanged={() => void projects.reload()}
+        />
       )}
-    </section>
+
+      <section className="adm-section">
+        <h2>Equipo de {org.name}</h2>
+        <p className="adm-muted">
+          Quien invites recibirá un correo con un enlace para elegir su propia contraseña. Estar en
+          la empresa no da acceso a las obras: eso se asigna proyecto por proyecto.
+        </p>
+        <InviteForm
+          orgId={org.id}
+          allowedRoles={assignableRoles}
+          defaultRole="member"
+          onInvited={() => void members.reload()}
+        />
+        {members.loading && <p className="adm-muted">Cargando…</p>}
+        {members.error && <p className="adm-error">{members.error}</p>}
+        {members.data && (
+          <MemberTable
+            orgId={org.id}
+            members={members.data as OrgMember[]}
+            assignableRoles={assignableRoles}
+            currentUserId={currentUserId}
+            onChanged={() => void members.reload()}
+          />
+        )}
+      </section>
+    </>
   );
 }
 
@@ -192,40 +245,5 @@ function NewProjectForm({ orgId, onCreated }: { orgId: string; onCreated(): void
       </button>
       {error && <p className="adm-error adm-inline-msg">{error}</p>}
     </form>
-  );
-}
-
-function TeamSection({
-  org,
-  assignableRoles,
-  currentUserId,
-}: {
-  org: Org;
-  assignableRoles: OrgRole[];
-  currentUserId: string | null;
-}) {
-  const load = useCallback(() => listOrgMembers(org.id), [org.id]);
-  const members = useAsyncData(load, [org.id]);
-
-  return (
-    <>
-      <InviteForm
-        orgId={org.id}
-        allowedRoles={assignableRoles}
-        defaultRole="member"
-        onInvited={() => void members.reload()}
-      />
-      {members.loading && <p className="adm-muted">Cargando…</p>}
-      {members.error && <p className="adm-error">{members.error}</p>}
-      {members.data && (
-        <MemberTable
-          orgId={org.id}
-          members={members.data}
-          assignableRoles={assignableRoles}
-          currentUserId={currentUserId}
-          onChanged={() => void members.reload()}
-        />
-      )}
-    </>
   );
 }

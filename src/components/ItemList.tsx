@@ -1,6 +1,6 @@
 import { Fragment, useMemo } from 'react';
-import { planLabel, zonesForProject } from '@/config/project';
 import { formatItemNo, formatTimestamp, itemZone, orderItems } from '@/lib/report';
+import { useProject } from '@/state/projectContext';
 import { useReport } from '@/state/reportContext';
 import type { ReportItem } from '@/types/report';
 
@@ -10,11 +10,9 @@ interface Props {
 
 export function ItemList({ onEdit }: Props) {
   const { state, removeItem } = useReport();
+  const { zones, planLabel } = useProject();
 
-  const ordered = useMemo(
-    () => orderItems(state.items, zonesForProject(state.proj)),
-    [state.items, state.proj]
-  );
+  const ordered = useMemo(() => orderItems(state.items, zones), [state.items, zones]);
 
   if (!state.items.length) {
     return (

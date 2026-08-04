@@ -1,8 +1,7 @@
 import { jsPDF } from 'jspdf';
-import { planLabel } from '@/config/project';
 import { formatTimestamp, itemZone } from '@/lib/report';
 import type { Keyplan } from '@/lib/plan';
-import type { ReportItem, ReportState } from '@/types/report';
+import type { PlanPin, ReportItem, ReportState } from '@/types/report';
 import * as T from './theme';
 
 export interface ReportDocumentInput {
@@ -12,6 +11,12 @@ export interface ReportDocumentInput {
   /** Key plans ya rasterizados, indexados por id de item. */
   keyplans: ReadonlyMap<string, Keyplan>;
   logoPng: string | null;
+  /**
+   * Etiqueta de la lámina de un pin. Se inyecta en vez de importarla porque
+   * las láminas ahora dependen del proyecto, y este módulo no debe saber
+   * cuál está activo.
+   */
+  planLabel(pin: Pick<PlanPin, 'id'> | null | undefined): string;
 }
 
 const setFill = (doc: jsPDF, c: T.Rgb) => doc.setFillColor(c[0], c[1], c[2]);
@@ -31,6 +36,7 @@ export function renderReportDocument({
   items,
   keyplans,
   logoPng,
+  planLabel,
 }: ReportDocumentInput): jsPDF {
   const doc = new jsPDF({ unit: 'pt', format: 'letter' });
   const projectName = state.proj || 'Site Visit Report';

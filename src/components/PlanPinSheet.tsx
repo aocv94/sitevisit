@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
-import { PLANS } from '@/config/project';
 import { fitDimensions, sheetCanvasBounds } from '@/lib/image';
 import {
   applyPinch,
@@ -7,11 +6,12 @@ import {
   drawPin,
   IDENTITY_VIEW,
   loadPlanImage,
-  missingPlanMessage,
+  MISSING_PLAN_MESSAGE,
   normalizePinPosition,
   planImageToScreen,
   type PlanView,
 } from '@/lib/plan';
+import { useProject } from '@/state/projectContext';
 import type { Point } from '@/types/markup';
 import type { PlanPin } from '@/types/report';
 
@@ -45,6 +45,8 @@ function toCanvasPoint(canvas: HTMLCanvasElement, clientX: number, clientY: numb
 }
 
 export function PlanPinSheet({ initialPin, onCancel, onSave }: Props) {
+  const { plans, planById } = useProject();
+
   const canvasRef = useRef<HTMLCanvasElement>(null);
   // Zoom, encuadre y pin viven en refs: el pinch los actualiza a ritmo de
   // dedo y pasar por setState en cada frame haria el gesto pastoso.
@@ -52,16 +54,17 @@ export function PlanPinSheet({ initialPin, onCancel, onSave }: Props) {
   const draftRef = useRef<PlanPin | null>(initialPin);
   const imageRef = useRef<HTMLImageElement | null>(null);
   /**
-   * Punteros tocando la lamina ahora mismo, y el pin que dejaria el toque si
-   * resulta ser un toque y no el principio de un pinch. El pin se confirma al
-   * levantar el dedo: mientras el gesto sigue vivo no se sabe cual de los dos
-   * es.
+   * El pin se confirma al levantar el dedo: mientras el gesto sigue vivo no
+   * se sabe si es un toque o el principio de un pinch. Si llega un segundo
+   * puntero, el candidato se descarta.
    */
   const activePointersRef = useRef(new Set<number>());
   const candidatePinRef = useRef<PlanPin | null>(null);
   const gestureIsPinchRef = useRef(false);
 
-  const [planId, setPlanId] = useState<string | null>(initialPin?.id ?? PLANS[0]?.id ?? null);
+  const [planId, setPlanId] = useState<string | null>(
+    () => planById(initialPin?.id)?.id ?? plans[0]?.id ?? null
+  );
   const [note, setNote] = useState(HINT);
   const [, repaintChips] = useReducer((n: number) => n + 1, 0);
 
@@ -105,26 +108,28 @@ export function PlanPinSheet({ initialPin, onCancel, onSave }: Props) {
 
   const selectPlan = useCallback(
     async (id: string) => {
+      const plan = planById(id);
       viewRef.current = { ...IDENTITY_VIEW };
       setPlanId(id);
-      setNote(`Loading ${id}...`);
-      const image = await loadPlanImage(id);
-      imageRef.current = image;
-      repaintChips();
-      if (!image) {
-        setNote(missingPlanMessage(id));
+      if (!plan) {
+        imageRef.current = null;
+        setNote(MISSING_PLAN_MESSAGE);
         paint();
         return;
       }
-      setNote(HINT);
+      setNote(`Loading ${plan.label}…`);
+      const image = await loadPlanImage(plan.storage_path);
+      imageRef.current = image;
+      repaintChips();
+      setNote(image ? HINT : MISSING_PLAN_MESSAGE);
       paint();
     },
-    [paint]
+    [paint, planById]
   );
 
   useEffect(() => {
     if (planId) void selectPlan(planId);
-    else setNote('No plans configured in PLANS[].');
+    else setNote('This project has no plan sheets yet.');
     // Solo al montar: los cambios posteriores pasan por selectPlan.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -186,8 +191,8 @@ export function PlanPinSheet({ initialPin, onCancel, onSave }: Props) {
       </div>
 
       <div className="plchips">
-        {PLANS.map((plan) => {
-          const missing = cachedPlanImage(plan.id) === null;
+        {plans.map((plan) => {
+          const missing = cachedPlanImage(plan.storage_path) === null;
           const classes = ['chip'];
           if (plan.id === planId) classes.push('on');
           if (missing) classes.push('miss');
@@ -212,8 +217,7 @@ export function PlanPinSheet({ initialPin, onCancel, onSave }: Props) {
             if (!canvas || !imageRef.current || !planId) return;
             event.preventDefault();
             activePointersRef.current.add(event.pointerId);
-            // Segundo dedo: esto es un pinch, no un toque. Se descarta el pin
-            // que habria dejado el primero.
+            // Segundo dedo: esto es un pinch, no un toque.
             if (activePointersRef.current.size > 1) {
               gestureIsPinchRef.current = true;
               candidatePinRef.current = null;

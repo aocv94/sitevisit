@@ -1,8 +1,8 @@
 import { useCallback, useMemo } from 'react';
-import { zonesForProject } from '@/config/project';
 import { loadPlanImage, renderKeyplan, type Keyplan } from '@/lib/plan';
 import { buildFilename, orderItems } from '@/lib/report';
 import { renderLogoPng } from '@/pdf/logo';
+import { useProject } from '@/state/projectContext';
 import { useReport } from '@/state/reportContext';
 import type { ReportItem } from '@/types/report';
 
@@ -16,6 +16,7 @@ const nextPaint = () => new Promise((resolve) => setTimeout(resolve, PAINT_DELAY
 
 export function usePdfExport() {
   const { state, flash } = useReport();
+  const { zones, planById, planLabel } = useProject();
   const logoPng = useMemo(() => renderLogoPng(), []);
 
   /** Rasteriza el key plan de cada item que tenga pin. */
@@ -25,7 +26,11 @@ export function usePdfExport() {
       await Promise.all(
         items.map(async (item) => {
           if (!item.plan) return;
-          const image = await loadPlanImage(item.plan.id);
+          // La lamina puede haberse borrado despues de colocar el pin. El
+          // item sigue en el reporte, solo que sin key plan al costado.
+          const plan = planById(item.plan.id);
+          if (!plan) return;
+          const image = await loadPlanImage(plan.storage_path);
           if (!image) return;
           const keyplan = renderKeyplan(image, item.plan, item.no);
           if (keyplan) keyplans.set(item.id, keyplan);
@@ -33,19 +38,19 @@ export function usePdfExport() {
       );
       return keyplans;
     },
-    []
+    [planById]
   );
 
   const build = useCallback(async () => {
-    const items = orderItems(state.items, zonesForProject(state.proj));
+    const items = orderItems(state.items, zones);
     const keyplans = await buildKeyplans(items);
     // jsPDF (con html2canvas y dompurify detras) pesa mas que el resto de la
     // app junta y solo hace falta al exportar. Cargarlo aqui deja el arranque
     // en campo mucho mas ligero; ya esta en cache antes del primer export.
     const { renderReportDocument } = await import('@/pdf/renderReport');
     await nextPaint();
-    return renderReportDocument({ state, items, keyplans, logoPng });
-  }, [state, buildKeyplans, logoPng]);
+    return renderReportDocument({ state, items, keyplans, logoPng, planLabel });
+  }, [state, zones, buildKeyplans, logoPng, planLabel]);
 
   const exportPdf = useCallback(async () => {
     if (!state.items.length) {

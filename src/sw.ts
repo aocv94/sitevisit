@@ -16,9 +16,14 @@ import { NavigationRoute, registerRoute } from 'workbox-routing';
  *   Todo lo demas -> cache-first.
  *     Codigo, planos y fuentes salen de cache. Abrir es instantaneo.
  *
- * Los assets con hash en el nombre y los planos entran al precache desde el
- * manifiesto que inyecta Vite. Ya NO hay que mantener la lista de planos a
- * mano en dos sitios: basta con dejar el JPEG en public/plans/.
+ * Los assets con hash en el nombre entran al precache desde el manifiesto
+ * que inyecta Vite.
+ *
+ * Las laminas de plano NO pasan por aqui. Antes eran 15 JPEG commiteados que
+ * se precacheaban con la app, iguales para todas las empresas; ahora cada
+ * proyecto tiene los suyos en Storage y se guardan aparte, por proyecto, en
+ * src/lib/planCache.ts. Meterlos en este precache obligaria a cada telefono
+ * a descargar los planos de obras en las que no trabaja.
  *
  * La otra mitad de esta politica son las cabeceras HTTP de vercel.json. Se
  * leen juntas: si /sw.js se cachea, un telefono con la PWA instalada se queda

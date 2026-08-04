@@ -1,4 +1,4 @@
-import { planById, planUrl } from '@/config/project';
+import { planImageUrl } from './planCache';
 import type { Point } from '@/types/markup';
 import type { PlanPin } from '@/types/report';
 
@@ -152,42 +152,41 @@ export function renderKeyplan(
 }
 
 /**
- * Cache de laminas. Memoriza tambien los fallos (null) para no reintentar en
- * bucle una lamina que no esta en el repo y para poder marcar su chip.
+ * Laminas ya decodificadas, indexadas por `storage_path`.
+ *
+ * Es una capa por encima de planCache: aquella guarda los BYTES para poder
+ * trabajar sin señal; esta guarda el HTMLImageElement ya decodificado, que
+ * es lo que consumen el canvas y el generador de PDF.
+ *
+ * Memoriza tambien los fallos (null) para no reintentar en bucle una lamina
+ * que no se puede traer, y para poder marcar su chip como ausente.
  */
-const planImageCache = new Map<string, HTMLImageElement | null>();
+const decodedPlans = new Map<string, HTMLImageElement | null>();
 
-export function cachedPlanImage(id: string): HTMLImageElement | null | undefined {
-  return planImageCache.get(id);
+export function cachedPlanImage(storagePath: string): HTMLImageElement | null | undefined {
+  return decodedPlans.get(storagePath);
 }
 
-export function loadPlanImage(id: string): Promise<HTMLImageElement | null> {
-  const cached = planImageCache.get(id);
-  if (cached !== undefined) return Promise.resolve(cached);
+export async function loadPlanImage(storagePath: string): Promise<HTMLImageElement | null> {
+  const cached = decodedPlans.get(storagePath);
+  if (cached !== undefined) return cached;
 
-  const def = planById(id);
-  if (!def) {
-    planImageCache.set(id, null);
-    return Promise.resolve(null);
+  try {
+    const url = await planImageUrl(storagePath);
+    const image = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = () => reject(new Error('La lámina no se pudo decodificar'));
+      img.src = url;
+    });
+    decodedPlans.set(storagePath, image);
+    return image;
+  } catch {
+    decodedPlans.set(storagePath, null);
+    return null;
   }
-
-  return new Promise((resolve) => {
-    const img = new Image();
-    img.onload = () => {
-      planImageCache.set(id, img);
-      resolve(img);
-    };
-    img.onerror = () => {
-      planImageCache.set(id, null);
-      resolve(null);
-    };
-    img.src = planUrl(def);
-  });
 }
 
-export function missingPlanMessage(id: string): string {
-  const def = planById(id);
-  return def
-    ? `No image found at ${planUrl(def)} - add it to the repo.`
-    : `Plan ${id} is not declared in PLANS[].`;
-}
+/** En inglés, como el resto de la pantalla de campo. */
+export const MISSING_PLAN_MESSAGE =
+  'This sheet could not be loaded. If you are offline, open it once with signal so it gets downloaded.';

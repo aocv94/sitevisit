@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent } from 'react';
-import { planLabel, zonesForProject } from '@/config/project';
 import {
   fitDimensions,
   flattenWithOverlay,
@@ -9,6 +8,7 @@ import {
   sheetCanvasBounds,
 } from '@/lib/image';
 import { isMeaningfulMark, paintMarks } from '@/lib/marks';
+import { useProject } from '@/state/projectContext';
 import { useReport } from '@/state/reportContext';
 import type { Mark, MarkupMode, Point } from '@/types/markup';
 import type { PlanPin, ReportItem } from '@/types/report';
@@ -22,6 +22,7 @@ interface Props {
 
 export function MarkupSheet({ item, onCancel, onSave }: Props) {
   const { state, flash } = useReport();
+  const { zones, planLabel } = useProject();
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const commentRef = useRef<HTMLTextAreaElement>(null);
@@ -86,12 +87,14 @@ export function MarkupSheet({ item, onCancel, onSave }: Props) {
   }, [src, redraw]);
 
   const zoneSuggestions = useMemo(() => {
-    const zones = [...zonesForProject(state.proj)];
+    // Las del proyecto primero, y detrás las escritas a mano en items
+    // anteriores: si alguien ya usó "Sótano", que no tenga que reescribirlo.
+    const suggestions = [...zones];
     for (const existing of state.items) {
-      if (existing.zone && !zones.includes(existing.zone)) zones.push(existing.zone);
+      if (existing.zone && !suggestions.includes(existing.zone)) suggestions.push(existing.zone);
     }
-    return zones;
-  }, [state.proj, state.items]);
+    return suggestions;
+  }, [zones, state.items]);
 
   function eventPoint(event: PointerEvent<HTMLCanvasElement>): Point | null {
     const canvas = canvasRef.current;

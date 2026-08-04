@@ -11,9 +11,14 @@ interface Row {
 }
 
 export async function listProjectMembers(projectId: string): Promise<ProjectMember[]> {
+  // El `!project_members_user_id_fkey` no es adorno: la tabla apunta a
+  // profiles DOS veces, por user_id y por assigned_by, y sin decir cual
+  // PostgREST se niega a resolver el join.
   const { data, error } = await getSupabase()
     .from('project_members')
-    .select(`project_id, user_id, assigned_at, profile:profiles(${PROFILE_COLUMNS})`)
+    .select(
+      `project_id, user_id, assigned_at, profile:profiles!project_members_user_id_fkey(${PROFILE_COLUMNS})`
+    )
     .eq('project_id', projectId);
   if (error) throw new Error(error.message);
 
@@ -32,10 +37,16 @@ export async function listProjectMembers(projectId: string): Promise<ProjectMemb
 }
 
 export async function assignToProject(projectId: string, userId: string): Promise<void> {
-  // Idempotente: reasignar a alguien que ya esta no debe reventar.
+  // ignoreDuplicates, no un upsert normal: en esta tabla no hay nada que
+  // actualizar, se esta asignado o no. Y un upsert corriente se traduce a
+  // `on conflict do update`, que exigiria ademas una policy de UPDATE que no
+  // tiene sentido conceder.
   const { error } = await getSupabase()
     .from('project_members')
-    .upsert({ project_id: projectId, user_id: userId }, { onConflict: 'project_id,user_id' });
+    .upsert(
+      { project_id: projectId, user_id: userId },
+      { onConflict: 'project_id,user_id', ignoreDuplicates: true }
+    );
   if (error) throw new Error(error.message);
 }
 

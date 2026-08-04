@@ -113,7 +113,6 @@ src/
 └── styles/                   tokens.css (color) + app.css (captura) + admin.css (paneles)
 
 public/
-├── plans/*.jpg               las 15 laminas del proyecto actual
 └── icon-192.png, icon-512.png
 
 supabase/
