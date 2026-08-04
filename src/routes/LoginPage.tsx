@@ -1,8 +1,35 @@
 import { useState, type FormEvent } from 'react';
 import { Link, Navigate, useLocation } from 'react-router-dom';
+import type { AuthError } from '@supabase/supabase-js';
 import { AuthLayout } from '@/components/AuthLayout';
 import { useAuth } from '@/auth/authContext';
 import { getSupabase } from '@/lib/supabase';
+
+/**
+ * Un fallo de red no es una contraseña mal puesta.
+ *
+ * Esta app se usa en obra, donde quedarse sin cobertura es lo normal. Decirle
+ * a alguien que su contraseña es incorrecta cuando lo que pasa es que no hay
+ * señal le manda a resetearla para nada.
+ */
+function describeSignInError(error: AuthError): string {
+  if (error.code === 'invalid_credentials' || error.status === 400) {
+    // Supabase no distingue "no existe" de "contraseña incorrecta", y hace
+    // bien: distinguirlo permitiría averiguar quién tiene cuenta.
+    return 'Email o contraseña incorrectos';
+  }
+  if (error.code === 'email_not_confirmed') {
+    return 'Confirma tu email antes de entrar: busca el correo que te enviamos.';
+  }
+  if (error.code === 'over_request_rate_limit') {
+    return 'Demasiados intentos seguidos. Espera un minuto y vuelve a probar.';
+  }
+  // status 0 = la petición no llegó a salir.
+  if (!error.status || error.name === 'AuthRetryableFetchError') {
+    return 'No se pudo contactar con el servidor. Comprueba la conexión.';
+  }
+  return error.message;
+}
 
 export function LoginPage() {
   const { status } = useAuth();
@@ -26,9 +53,7 @@ export function LoginPage() {
       password,
     });
     if (signInError) {
-      // Supabase no distingue "no existe" de "contraseña incorrecta", y esta
-      // bien que no lo haga: decirlo permite averiguar quien tiene cuenta.
-      setError('Email o contraseña incorrectos');
+      setError(describeSignInError(signInError));
       setBusy(false);
     }
     // Con exito no se toca el estado: AuthProvider redirige al recibir la
