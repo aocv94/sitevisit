@@ -116,10 +116,18 @@ Deno.serve(async (req: Request) => {
   let invited = false;
 
   if (!userId) {
-    const redirectTo = Deno.env.get('PUBLIC_APP_URL');
+    // El enlace vuelve al sitio DESDE EL QUE se invita: en local a
+    // localhost, en produccion al dominio. Sin esto habria que cambiar un
+    // secreto cada vez que se pasa de uno a otro.
+    //
+    // Que el origen lo mande el navegador no lo hace peligroso: Supabase
+    // rechaza cualquier redirectTo que no este en la lista de Redirect URLs
+    // del proyecto, asi que la lista es la que manda, no esta cabecera.
+    // PUBLIC_APP_URL queda de reserva para llamadas sin Origin (curl, cron).
+    const origin = req.headers.get('Origin') ?? Deno.env.get('PUBLIC_APP_URL');
     const { data: invite, error: inviteError } = await admin.auth.admin.inviteUserByEmail(email, {
       data: fullName ? { full_name: fullName } : undefined,
-      ...(redirectTo ? { redirectTo: `${redirectTo}/aceptar-invitacion` } : {}),
+      ...(origin ? { redirectTo: `${origin}/aceptar-invitacion` } : {}),
     });
     if (inviteError || !invite?.user) {
       return errorResponse(inviteError?.message ?? 'No se pudo enviar la invitacion', 400);

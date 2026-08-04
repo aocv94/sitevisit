@@ -47,14 +47,22 @@ sitio donde se usa.
 
 ## 4. URLs de redirección
 
-`Authentication → URL Configuration`. Añade a **Redirect URLs**:
+`Authentication → URL Configuration`. Son dos ajustes distintos:
+
+- **Site URL** — un solo valor, el destino por defecto. Pon el de producción.
+- **Redirect URLs** — una **lista**. Deja los dos, para poder trabajar en local
+  y en producción sin tocar nada:
 
 ```
 http://localhost:5173/aceptar-invitacion
 https://TU-DOMINIO/aceptar-invitacion
 ```
 
-Sin esto los enlaces de invitación y de recuperación de contraseña rebotan.
+Esta lista es lo que de verdad decide a dónde puede volver un enlace de correo:
+Supabase rechaza cualquier destino que no esté aquí.
+
+Ojo: **el login no usa redirecciones**. Solo pasan por aquí los enlaces de
+invitación y de recuperación de contraseña.
 
 ## 5. Desplegar la Edge Function
 
@@ -63,11 +71,18 @@ Las invitaciones no pueden salir del navegador: crear usuarios exige la
 
 ```bash
 npx supabase functions deploy invite-user
-npx supabase secrets set PUBLIC_APP_URL=https://TU-DOMINIO
 ```
 
-`PUBLIC_APP_URL` es a dónde apunta el enlace del correo. En local puedes
-ponerlo a `http://localhost:5173` mientras pruebas.
+El enlace del correo vuelve al sitio **desde el que se invitó**: si invitas
+desde `localhost:5173` llega a localhost, y si invitas desde producción llega
+a producción. No hay nada que cambiar al pasar de uno a otro.
+
+`PUBLIC_APP_URL` es opcional, solo como reserva para llamadas sin cabecera
+`Origin` (curl, un cron). Si lo quieres:
+
+```bash
+npx supabase secrets set PUBLIC_APP_URL=https://TU-DOMINIO
+```
 
 ## 6. Crear el primer dueño de la app
 
