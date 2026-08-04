@@ -1,0 +1,1220 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="manifest" href="manifest-daily.json">
+<meta name="theme-color" content="#ffffff">
+<title>Daily Log</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+
+  :root{
+    /* Mismo tema claro que el reporte de visita: masthead clara sobre papel.
+       color-scheme fija tambien los controles nativos (el date picker), que si
+       no salen oscuros cuando el sistema esta en modo oscuro.                 */
+    color-scheme: light;
+    --mark:#7ba7af;
+    --mark-deep:#56757a; /* fallback = accent x0.70; el JS lo recalcula */
+    --ink:#20211c;
+    --paper:#f5f4f1;
+    --line:#d6d5d0;
+    --dim:#6d7680;
+    --flag:#c8352a;
+    --bg:#f5f4f1;
+    --text:#20211c;
+    --card:#ffffff;
+    --border:#d6d5d0;
+  }
+
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  .svr{
+    font-family:'Archivo',system-ui,sans-serif;
+    color:var(--text);background:var(--bg);
+    max-width:560px;margin:0 auto;padding:0 0 120px;min-height:100vh;
+  }
+  .svr h1,.svr h2{margin:0}
+
+  .mast{background:#fff;color:var(--text);padding:16px 18px;border-bottom:1px solid var(--line)}
+  .mast .brandrow{display:flex;align-items:center;gap:10px;padding-bottom:12px;border-bottom:1px solid var(--line)}
+  /* La marca de Constellation es vectorial: el triangulo se inyecta como SVG
+     desde BRAND.markPath, no como JPG. Sin placa: la masthead ya es clara.  */
+  .mast .tri{height:26px;width:auto;display:block;flex:none}
+  .mast .wm{font-size:12px;letter-spacing:.34em;text-transform:uppercase;font-weight:600;color:var(--mark-deep)}
+  .mast .btm{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;padding-top:12px}
+  .mast h1{font-size:18px;font-weight:800;letter-spacing:-.015em;line-height:1.15}
+  .mast .sub{font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:var(--dim);margin-top:5px}
+  .tally{font-family:'IBM Plex Mono',monospace;text-align:right;line-height:1}
+  .tally b{display:block;font-size:28px;font-weight:500;color:var(--mark-deep)}
+  .tally span{display:block;font-size:8.5px;letter-spacing:.16em;color:var(--dim);margin-top:4px}
+
+  .hdr{padding:14px 18px;border-bottom:2px solid var(--line);display:grid;grid-template-columns:1fr 152px;gap:10px}
+  label.lbl{display:block;font-size:9px;letter-spacing:.16em;text-transform:uppercase;color:var(--dim);margin-bottom:4px;font-weight:600}
+  .svr input,.svr textarea,.svr select,
+  .form input,.form textarea{
+    width:100%;font-family:'Archivo',sans-serif;font-size:15px;color:var(--text);
+    background:var(--card);border:1px solid var(--line);border-radius:2px;padding:9px 10px;
+  }
+  .svr textarea,.form textarea{resize:vertical;min-height:74px;line-height:1.4}
+  .svr input:focus,.svr textarea:focus,.svr select:focus,
+  .form input:focus,.form textarea:focus{outline:2px solid var(--mark-deep);outline-offset:0;border-color:var(--mark-deep)}
+
+  .btn{display:block;width:100%;border:0;border-radius:2px;padding:15px;
+    font-family:'Archivo',sans-serif;font-size:13.5px;font-weight:700;letter-spacing:.09em;
+    text-transform:uppercase;cursor:pointer}
+  .btn-primary{background:var(--mark);color:#1a1b14}
+  .btn-primary:active{background:color-mix(in srgb, var(--mark) 85%, #000)}
+  .btn-ghost{background:transparent;color:var(--text);border:1px solid var(--line)}
+  .btn-sm{padding:10px;font-size:11.5px}
+  .btn-row{display:flex;gap:8px}
+  .btn-row .btn{flex:1}
+
+  input[type=file]{display:none}
+
+  /* Banda de acento con texto oscuro, igual que .zoneband del reporte: marca
+     el arranque de cada seccion tipada de la bitacora.                      */
+  .secband{background:var(--mark);color:var(--ink);padding:6px 18px;
+    font-size:9.5px;letter-spacing:.2em;text-transform:uppercase;font-weight:700}
+  .sec{padding:14px 18px;border-bottom:1px solid var(--line)}
+  .sec .hint{font-size:11px;color:var(--dim);line-height:1.45;margin-top:8px}
+
+  /* Weather: la captura manda, la linea automatica es un apoyo. */
+  .wx{display:flex;gap:12px;align-items:flex-start}
+  .wx img{width:74px;height:74px;object-fit:cover;border:1px solid var(--line);flex:none;background:#e4e3de}
+  .wx .body{flex:1;min-width:0}
+  .wxline{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--mark-deep);line-height:1.4;min-height:17px}
+
+  .chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:9px}
+  .chip{font-family:'IBM Plex Mono',monospace;font-size:11px;padding:5px 9px;border:1px solid var(--line);
+    background:var(--card);border-radius:2px;color:var(--text);display:inline-flex;align-items:center;gap:7px}
+  .chip button{border:0;background:none;color:var(--flag);font-size:13px;line-height:1;padding:0;cursor:pointer}
+  .addrow{display:flex;gap:8px}
+  .addrow input{flex:1}
+  .addrow .btn{width:auto;flex:0 0 74px}
+
+  .item{padding:12px 0;border-bottom:1px solid var(--line)}
+  .item:last-child{border-bottom:0}
+  .item .who{font-size:9px;letter-spacing:.16em;text-transform:uppercase;color:var(--mark-deep);font-weight:700;margin-bottom:4px}
+  .item .txt{font-size:14px;line-height:1.4;word-wrap:break-word}
+  .item .thumbs{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+  .item .thumbs img{width:52px;height:52px;object-fit:cover;border:1px solid var(--line);background:#e4e3de}
+  .item .kill{border:0;background:none;color:var(--flag);font-size:11px;font-weight:700;
+    letter-spacing:.08em;padding:6px 0 0;cursor:pointer;text-transform:uppercase}
+  .item .edit{border:0;background:none;color:var(--dim);font-size:11px;font-weight:700;
+    letter-spacing:.08em;padding:6px 14px 0 0;cursor:pointer;text-transform:uppercase}
+
+  .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:4px}
+  .grid figure{margin:0;position:relative}
+  .grid img{width:100%;aspect-ratio:1;object-fit:cover;border:1px solid var(--line);background:#e4e3de;display:block}
+  .grid figcaption{font-size:10px;color:var(--dim);line-height:1.3;margin-top:3px;word-wrap:break-word}
+
+  .empty{padding:18px 0;text-align:center;color:var(--dim);font-size:13px;line-height:1.5}
+
+  .foot{position:fixed;bottom:0;left:0;right:0;max-width:560px;margin:0 auto;
+    padding:12px 18px calc(12px + env(safe-area-inset-bottom));background:var(--bg);border-top:2px solid var(--line)}
+
+  .sheet{position:fixed;inset:0;background:var(--bg);z-index:50;display:flex;flex-direction:column;max-width:560px;margin:0 auto}
+  .sheet-top{background:var(--ink);color:var(--paper);padding:12px 16px;display:flex;justify-content:space-between;align-items:center;position:relative}
+  .sheet-top h2{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);margin:0;white-space:nowrap;
+    font-size:12px;letter-spacing:.18em;text-transform:uppercase;font-weight:600;color:var(--mark)}
+  .sheet-top button{background:none;border:0;color:var(--paper);font-size:12.5px;font-weight:700;letter-spacing:.09em;cursor:pointer;text-transform:uppercase}
+  .sheet-top .rotate-btn{background:rgba(255,255,255,0.1);border-radius:4px;padding:6px 12px;font-size:11px;color:var(--mark)}
+  .canvas-wrap{background:#131410;display:flex;align-items:center;justify-content:center;flex:none;overflow:hidden}
+  canvas{max-width:100%;touch-action:none;display:block}
+  .tools{display:flex;gap:6px;padding:9px 12px;background:#1a1b16}
+  .tools .t{flex:1;background:#2b2c24;color:#d1d2c8;border:0;border-radius:2px;padding:11px 4px;
+    font-size:10.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;cursor:pointer;font-family:'Archivo',sans-serif}
+  .tools .t.on{background:var(--flag);color:#fff}
+  .form{padding:14px 16px;overflow-y:auto;flex:1}
+  .form > div{margin-bottom:12px}
+
+  .note{font-size:11px;color:var(--dim);line-height:1.45;padding:10px 18px}
+  .status{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--mark-deep);padding:8px 18px 0;min-height:20px}
+</style>
+
+<div class="svr">
+  <div class="mast">
+    <div class="brandrow">
+      <span id="brandMark"></span>
+      <span class="wm" id="brandWord"></span>
+    </div>
+    <div class="btm">
+      <div>
+        <h1 id="mastTitle">Daily Log</h1>
+        <div class="sub" id="mastSub">Construction daily log</div>
+      </div>
+      <div class="tally"><b id="tallyNum">0</b><span>Entries</span></div>
+    </div>
+  </div>
+
+  <div class="hdr">
+    <div style="grid-column:1/-1">
+      <label class="lbl" for="fProj">Project</label>
+      <input id="fProj" placeholder="Name or address">
+    </div>
+    <div style="grid-column:1/-1">
+      <label class="lbl" for="fDate">Log date</label>
+      <input id="fDate" type="date">
+    </div>
+  </div>
+
+  <div class="status" id="status"></div>
+
+  <div class="secband">Weather</div>
+  <div class="sec">
+    <div class="wx">
+      <img id="wxThumb" alt="" style="display:none">
+      <div class="body">
+        <div class="wxline" id="wxLine"></div>
+        <div style="height:9px"></div>
+        <div class="btn-row">
+          <label for="wxIn" class="btn btn-primary btn-sm" style="text-align:center">Screenshot</label>
+          <button class="btn btn-ghost btn-sm" id="wxFetch">Auto</button>
+        </div>
+        <input id="wxIn" type="file" accept="image/*">
+      </div>
+    </div>
+    <div class="hint">Screenshot the weather app as usual. Auto fills one line from your current location - check it before relying on it.</div>
+  </div>
+
+  <div class="secband">Subcontractors</div>
+  <div class="sec">
+    <div class="addrow">
+      <input id="subIn" placeholder="Trade or company" enterkeyhint="done">
+      <button class="btn btn-ghost btn-sm" id="subAdd">Add</button>
+    </div>
+    <div class="chips" id="subChips"></div>
+  </div>
+
+  <div class="secband">Activities</div>
+  <div class="sec">
+    <div id="actList"></div>
+    <div style="height:10px"></div>
+    <button class="btn btn-primary btn-sm" id="actAdd">Add activity</button>
+  </div>
+
+  <div class="secband">Comments</div>
+  <div class="sec">
+    <div id="cmtList"></div>
+    <div style="height:10px"></div>
+    <button class="btn btn-ghost btn-sm" id="cmtAdd">Add comment</button>
+  </div>
+
+  <div class="secband">Pics</div>
+  <div class="sec">
+    <div class="grid" id="picGrid"></div>
+    <div id="picEmpty" class="empty">No general photos yet.</div>
+    <div style="height:10px"></div>
+    <div class="btn-row">
+      <label for="picCam" class="btn btn-primary btn-sm" style="text-align:center">Take photo</label>
+      <label for="picLib" class="btn btn-ghost btn-sm" style="text-align:center">From gallery</label>
+    </div>
+    <input id="picCam" type="file" accept="image/*" capture="environment">
+    <input id="picLib" type="file" accept="image/*" multiple>
+  </div>
+
+  <div class="note">Data stays on this device. Export the PDF and file it before clearing.</div>
+
+  <div class="foot">
+    <div class="btn-row">
+      <button class="btn btn-primary" id="btnShare">Share</button>
+      <button class="btn btn-ghost" id="btnPdf">Export PDF</button>
+      <button class="btn btn-ghost" id="btnClear" style="flex:0 0 76px">Clear</button>
+    </div>
+  </div>
+</div>
+
+<!-- hoja de actividad: subcontratista + descripcion + fotos -->
+<div class="sheet" id="actSheet" style="display:none">
+  <div class="sheet-top">
+    <button id="acCancel">Cancel</button>
+    <h2>Activity</h2>
+    <button id="acSave">Save</button>
+  </div>
+  <div class="form">
+    <div>
+      <label class="lbl" for="acSub">Subcontractor</label>
+      <input id="acSub" placeholder="Trade or company" list="subList">
+      <datalist id="subList"></datalist>
+    </div>
+    <div>
+      <label class="lbl" for="acTxt">What they did</label>
+      <textarea id="acTxt" placeholder="Trade, location, activity"></textarea>
+    </div>
+    <div>
+      <label class="lbl">Photos</label>
+      <div class="grid" id="acThumbs"></div>
+      <div style="height:8px"></div>
+      <div class="btn-row">
+        <label for="acCam" class="btn btn-primary btn-sm" style="text-align:center">Take photo</label>
+        <label for="acLib" class="btn btn-ghost btn-sm" style="text-align:center">From gallery</label>
+      </div>
+      <input id="acCam" type="file" accept="image/*" capture="environment">
+      <input id="acLib" type="file" accept="image/*" multiple>
+    </div>
+  </div>
+</div>
+
+<!-- hoja de comentario -->
+<div class="sheet" id="cmtSheet" style="display:none">
+  <div class="sheet-top">
+    <button id="cmCancel">Cancel</button>
+    <h2>Comment</h2>
+    <button id="cmSave">Save</button>
+  </div>
+  <div class="form">
+    <div>
+      <label class="lbl" for="cmSub">Subcontractor <span style="text-transform:none;letter-spacing:0">(optional)</span></label>
+      <input id="cmSub" placeholder="Trade or company" list="subList">
+    </div>
+    <div>
+      <label class="lbl" for="cmTxt">Comment</label>
+      <textarea id="cmTxt" placeholder="Meeting, decision, delivery, RFI" style="min-height:130px"></textarea>
+    </div>
+  </div>
+</div>
+
+<!-- hoja de marcado: comun a fotos de actividad y a Pics -->
+<div class="sheet" id="sheet" style="display:none;z-index:60">
+  <div class="sheet-top">
+    <button id="shCancel">Cancel</button>
+    <h2>Mark up</h2>
+    <div>
+      <button class="rotate-btn" id="shRotate">&#8635; Rotate</button>
+      <button id="shSave">Save</button>
+    </div>
+  </div>
+  <div class="canvas-wrap"><canvas id="cv"></canvas></div>
+  <div class="tools">
+    <button class="t on" id="tDraw">Circle</button>
+    <button class="t" id="tText">Text</button>
+    <button class="t" id="tUndo">Undo</button>
+    <button class="t" id="tClear">Clear</button>
+  </div>
+  <div class="form">
+    <div>
+      <label class="lbl" for="eCap">Caption</label>
+      <input id="eCap" placeholder="Location or subject">
+    </div>
+  </div>
+</div>
+
+<script src="jspdf.umd.min.js"></script>
+<script>
+(function(){
+
+  const BUILD='2026-08-03-constellation-a';
+  const KEY='dlog_state_v1';
+
+  /* ---------------- Marca ----------------
+     Un solo objeto controla toda la identidad, misma forma que la tabla orgs
+     de supabase/schema.sql. A diferencia de Landwise, Constellation es una
+     marca vectorial: markPath lleva el path del triangulo y el resto del
+     codigo lo rasteriza cuando el PDF necesita un bitmap.                  */
+  const BRAND={
+    name:      'Constellation Group',
+    wordmark:  'CONSTELLATION',
+    lockup:    null,                 // sin lockup horizontal raster
+    mark:      null,                 // sin JPG: la marca es vectorial
+    markPath:  {                     // triangulo, coordenadas del SVG original
+      d:'M246.61,0H113.39L0,331.73h360L246.61,0ZM177.17,21.57h5.66l87.73,257.02H89.43L177.17,21.57Z',
+      w:360, h:331.73
+    },
+    accent:    '#7ba7af',
+    disclaimer:[
+      'Record of construction activity observed on the date shown. Compiled from field observation and subcontractor reporting.',
+      'Not an exhaustive account of all work performed, and not a directive to change contract scope, schedule, or cost.'
+    ]
+  };
+
+  function hexRgb(h){
+    h=h.replace('#','');
+    return [parseInt(h.slice(0,2),16),parseInt(h.slice(2,4),16),parseInt(h.slice(4,6),16)];
+  }
+
+  document.documentElement.style.setProperty('--mark', BRAND.accent);
+  /* Mismo derivado x0.70 que el reporte de visita: el accent puro solo
+     contrasta sobre fondo oscuro, sobre papel claro va el tono profundo.  */
+  const deep=hexRgb(BRAND.accent).map(function(c){ return Math.round(c*0.70); });
+  const DEEPCSS='rgb('+deep.join(',')+')';
+  document.documentElement.style.setProperty('--mark-deep',DEEPCSS);
+
+  /* La marca puede llegar como raster (JPG con fondo blanco quemado, que hay
+     que destintar) o como vectorial (path, que hay que rasterizar). Las dos
+     ramas terminan en un PNG con alfa, asi que masthead y PDF no se enteran. */
+  let logoPng=null, logoAR=1;
+
+  function keyOutWhite(img){
+    const c=document.createElement('canvas');
+    c.width=img.naturalWidth; c.height=img.naturalHeight;
+    const x=c.getContext('2d');
+    x.drawImage(img,0,0);
+    const d=x.getImageData(0,0,c.width,c.height), p=d.data;
+    for(let i=0;i<p.length;i+=4){
+      const m=Math.min(p[i],p[i+1],p[i+2]);
+      if(m>=248) p[i+3]=0;
+      else if(m>225) p[i+3]=Math.round(255*(248-m)/22);
+    }
+    x.putImageData(d,0,0);
+    return c.toDataURL('image/png');
+  }
+
+  function rasterizePath(pathData,hex,scale){
+    const c=document.createElement('canvas');
+    c.width=Math.round(pathData.w*scale); c.height=Math.round(pathData.h*scale);
+    const x=c.getContext('2d');
+    x.scale(scale,scale);
+    x.fillStyle=hex; x.fill(new Path2D(pathData.d));
+    return c.toDataURL('image/png');
+  }
+
+  (function loadMark(){
+    if(BRAND.markPath){
+      /* En el PDF la marca va sobre papel blanco, asi que se rasteriza en el
+         tono profundo, no en el accent puro: mismo criterio que el texto.  */
+      try{
+        logoPng=rasterizePath(BRAND.markPath,DEEPCSS,0.6);
+        logoAR=BRAND.markPath.w/BRAND.markPath.h;
+      }catch(e){ logoPng=null; }
+      return;
+    }
+    if(!BRAND.mark) return;
+    const img=new Image();
+    img.onload=function(){
+      try{ logoPng=keyOutWhite(img); logoAR=img.naturalWidth/img.naturalHeight; }
+      catch(e){ logoPng=null; }
+    };
+    img.onerror=function(){ logoPng=null; };
+    img.src=BRAND.mark;
+  })();
+
+  /* Masthead: el triangulo va como SVG inline (nitido a cualquier densidad),
+     no como el PNG rasterizado que usa el PDF.                             */
+  (function paintMasthead(){
+    document.getElementById('brandWord').textContent=BRAND.wordmark;
+    const holder=document.getElementById('brandMark');
+    if(BRAND.markPath){
+      const p=BRAND.markPath;
+      holder.innerHTML='<svg class="tri" viewBox="0 0 '+p.w+' '+p.h+
+        '" xmlns="http://www.w3.org/2000/svg"><path fill="'+BRAND.accent+'" d="'+p.d+'"/></svg>';
+    }else if(BRAND.lockup){
+      holder.innerHTML='<img class="tri" alt="" src="'+BRAND.lockup+'">';
+    }
+  })();
+
+  /* ---------------- estado ---------------- */
+  let state={
+    proj:'', date:'',
+    wx:{photo:null, line:''},
+    subs:[],
+    acts:[],   // {id, sub, txt, photos:[{src,cap,ts}]}
+    cmts:[],   // {id, sub, txt}
+    pics:[]    // {id, src, cap, ts}
+  };
+
+  let marks=[], cur=null, baseImg=null, mode='pen', pending=[];
+  let origSrc=null, rotation=0;
+  let shotDraft=null;      // {src, cap, ts} en edicion
+  let shotTarget=null;     // 'pic' | 'act' | 'wx'
+  let actDraft=null, cmtDraft=null;
+
+  const store={
+    get:async function(){
+      try{ if(window.storage&&window.storage.get){const r=await window.storage.get(KEY,false);return r&&r.value?JSON.parse(r.value):null;} }catch(e){}
+      try{ const s=localStorage.getItem(KEY); return s?JSON.parse(s):null; }catch(e){ return null; }
+    },
+    set:async function(v){
+      const s=JSON.stringify(v);
+      try{ if(window.storage&&window.storage.set){ await window.storage.set(KEY,s,false); return; } }catch(e){}
+      try{ localStorage.setItem(KEY,s); }catch(e){ flash('Storage full - export the PDF now'); }
+    }
+  };
+
+  const $=function(id){return document.getElementById(id)};
+
+  let saveTimeout=null;
+  function saveState(){
+    clearTimeout(saveTimeout);
+    saveTimeout=setTimeout(function(){ store.set(state); },300);
+  }
+
+  function flash(m){ $('status').textContent=m; setTimeout(function(){ if($('status').textContent===m) $('status').textContent=''; },3500); }
+
+  function checkStorage(){
+    try{
+      let total=0;
+      for(let key in localStorage){
+        if(localStorage.hasOwnProperty(key)) total+=localStorage[key].length*2;
+      }
+      const MB=total/(1024*1024);
+      if(MB>7) flash('Storage: '+MB.toFixed(1)+'MB used. Export PDF and clear soon.');
+    }catch(e){}
+  }
+
+  function todayLocal(){
+    const d=new Date();
+    const p=function(n){return String(n).padStart(2,'0')};
+    return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate());
+  }
+  function uid(){ return Date.now()+'_'+Math.random().toString(36).slice(2); }
+
+  /* Fecha larga para la cabecera del PDF: "July 28, 2026". Se construye a
+     mano desde YYYY-MM-DD porque new Date('2026-07-28') es UTC y en husos
+     al oeste retrocede un dia.                                            */
+  const MONTHS=['January','February','March','April','May','June','July',
+                'August','September','October','November','December'];
+  function longDate(s){
+    if(!s) return '';
+    const p=String(s).split('-');
+    if(p.length!==3) return s;
+    const m=parseInt(p[1],10)-1;
+    if(!(m>=0&&m<12)) return s;
+    return MONTHS[m]+' '+parseInt(p[2],10)+', '+p[0];
+  }
+
+  (async function(){
+    const s=await store.get();
+    if(s) state=Object.assign(state,s);
+    if(!state.wx) state.wx={photo:null,line:''};
+    if(!state.subs) state.subs=[];
+    if(!state.acts) state.acts=[];
+    if(!state.cmts) state.cmts=[];
+    if(!state.pics) state.pics=[];
+    if(!state.date) state.date=todayLocal();
+    $('fProj').value=state.proj||'';
+    $('fDate').value=state.date;
+    store.set(state);
+    render();
+    checkStorage();
+  })();
+
+  $('mastSub').textContent='Construction daily log  /  Build '+BUILD;
+
+  if('serviceWorker' in navigator){
+    window.addEventListener('load',function(){
+      navigator.serviceWorker.register('sw.js',{updateViaCache:'none'})
+        .then(function(reg){
+          reg.update();
+          document.addEventListener('visibilitychange',function(){
+            if(!document.hidden && navigator.onLine) reg.update();
+          });
+        })
+        .catch(function(){});
+    });
+  }
+  window.addEventListener('offline',function(){ flash('Offline - capture and export still work'); });
+  window.addEventListener('online',function(){ flash('Back online'); });
+
+  ['fProj','fDate'].forEach(function(id){
+    $(id).addEventListener('input',function(){
+      state.proj=$('fProj').value; state.date=$('fDate').value;
+      $('mastTitle').textContent=state.proj||'Daily Log';
+      saveState();
+    });
+  });
+
+  /* ---------------- Weather ----------------
+     Open-Meteo: sin clave de API y con CORS, que es la unica forma de pedir
+     el clima desde el cliente sin gestionar un secreto. past_days cubre los
+     logs que se rellenan un par de dias tarde. La captura de pantalla sigue
+     siendo la via principal: esto solo escribe una linea de apoyo.        */
+  const WMO={0:'Clear',1:'Mainly clear',2:'Partly cloudy',3:'Overcast',
+    45:'Fog',48:'Rime fog',51:'Light drizzle',53:'Drizzle',55:'Heavy drizzle',
+    56:'Freezing drizzle',57:'Freezing drizzle',61:'Light rain',63:'Rain',65:'Heavy rain',
+    66:'Freezing rain',67:'Freezing rain',71:'Light snow',73:'Snow',75:'Heavy snow',
+    77:'Snow grains',80:'Light showers',81:'Showers',82:'Heavy showers',
+    85:'Snow showers',86:'Snow showers',95:'Thunderstorm',96:'Thunderstorm, hail',99:'Thunderstorm, hail'};
+
+  function daysBack(dateStr){
+    if(!dateStr) return 0;
+    const p=String(dateStr).split('-');
+    if(p.length!==3) return 0;
+    const t=new Date(); t.setHours(0,0,0,0);
+    const d=new Date(parseInt(p[0],10), parseInt(p[1],10)-1, parseInt(p[2],10));
+    return Math.round((t-d)/86400000);
+  }
+
+  $('wxFetch').addEventListener('click',function(){
+    if(!navigator.geolocation){ flash('This browser has no location support - use the screenshot'); return; }
+    const back=daysBack(state.date);
+    if(back<0){ flash('That date is in the future - no weather for it'); return; }
+    if(back>90){ flash('That date is too far back - use the screenshot'); return; }
+    flash('Getting location...');
+    navigator.geolocation.getCurrentPosition(function(pos){
+      const la=pos.coords.latitude.toFixed(4), lo=pos.coords.longitude.toFixed(4);
+      flash('Getting weather...');
+      const url='https://api.open-meteo.com/v1/forecast?latitude='+la+'&longitude='+lo+
+        '&daily=temperature_2m_max,temperature_2m_min,weather_code,precipitation_sum'+
+        '&temperature_unit=fahrenheit&precipitation_unit=inch&timezone=auto&past_days='+
+        Math.min(92,Math.max(1,back+1))+'&forecast_days=1';
+      fetch(url).then(function(r){
+        if(!r.ok) throw new Error('http '+r.status);
+        return r.json();
+      }).then(function(j){
+        const d=j&&j.daily;
+        if(!d||!d.time||!d.time.length) throw new Error('no daily block');
+        let i=d.time.indexOf(state.date);
+        if(i<0) throw new Error('date not in range');
+        const hi=d.temperature_2m_max[i], lo2=d.temperature_2m_min[i];
+        const code=d.weather_code[i], pr=d.precipitation_sum[i];
+        const parts=[];
+        if(WMO[code]) parts.push(WMO[code]);
+        if(hi!=null&&lo2!=null) parts.push(Math.round(hi)+'/'+Math.round(lo2)+' F');
+        if(pr!=null&&pr>0) parts.push(pr.toFixed(2)+' in rain');
+        state.wx.line=parts.join('  /  ');
+        saveState(); renderWx();
+        flash('Weather filled - check it');
+      }).catch(function(err){
+        flash('Weather lookup failed - use the screenshot');
+      });
+    },function(){
+      flash('Location denied - use the screenshot');
+    },{timeout:10000, maximumAge:600000});
+  });
+
+  $('wxIn').addEventListener('change',function(e){
+    const f=e.target.files&&e.target.files[0];
+    e.target.value='';
+    if(!f) return;
+    /* La captura del tiempo no se marca: se guarda tal cual. */
+    shrinkImage(f,function(src){
+      state.wx.photo=src; saveState(); renderWx(); checkStorage();
+    });
+  });
+
+  function renderWx(){
+    const t=$('wxThumb');
+    if(state.wx.photo){ t.src=state.wx.photo; t.style.display=''; }
+    else t.style.display='none';
+    $('wxLine').textContent=state.wx.line||'';
+  }
+
+  /* ---------------- lectura y reduccion de imagen ---------------- */
+  function shrinkImage(file,cb){
+    const fr=new FileReader();
+    fr.onload=function(){
+      const img=new Image();
+      img.onload=function(){
+        let MAX=1500, w=img.width, h=img.height;
+        if(Math.max(w,h)>MAX){ const k=MAX/Math.max(w,h); w=Math.round(w*k); h=Math.round(h*k); }
+        const c=document.createElement('canvas'); c.width=w; c.height=h;
+        c.getContext('2d').drawImage(img,0,0,w,h);
+        cb(c.toDataURL('image/jpeg',0.65), file.lastModified||Date.now());
+      };
+      img.onerror=function(){ flash('That file would not open as an image'); nextPending(); };
+      img.src=fr.result;
+    };
+    fr.readAsDataURL(file);
+  }
+
+  function handleFiles(files,target){
+    const list=Array.prototype.slice.call(files);
+    if(!list.length) return;
+    shotTarget=target;
+    if(list.length>1) flash('Adding '+list.length+' photos, one at a time');
+    pending=list.slice(1);
+    shrinkImage(list[0],function(src,ts){ openEditor({src:src,cap:'',ts:ts}); });
+  }
+  function nextPending(){
+    if(!pending.length) return;
+    shrinkImage(pending.shift(),function(src,ts){ openEditor({src:src,cap:'',ts:ts}); });
+  }
+
+  $('picCam').addEventListener('change',function(e){ pending=[]; handleFiles(e.target.files,'pic'); e.target.value=''; });
+  $('picLib').addEventListener('change',function(e){ pending=[]; handleFiles(e.target.files,'pic'); e.target.value=''; });
+  $('acCam').addEventListener('change',function(e){ pending=[]; handleFiles(e.target.files,'act'); e.target.value=''; });
+  $('acLib').addEventListener('change',function(e){ pending=[]; handleFiles(e.target.files,'act'); e.target.value=''; });
+
+  /* ---------------- lienzo de marcado ---------------- */
+  const cv=$('cv'), ctx=cv.getContext('2d');
+  function penW(){ return Math.max(2.2, cv.width/165); }
+  function txtH(){ return Math.max(13, cv.width/22); }
+
+  function rotateImage(dataUrl,degrees,cb){
+    const img=new Image();
+    img.onload=function(){
+      const rad=degrees*Math.PI/180;
+      const w=img.width, h=img.height;
+      let cw,ch;
+      if(degrees===90||degrees===270){ cw=h; ch=w; } else { cw=w; ch=h; }
+      const c=document.createElement('canvas');
+      c.width=cw; c.height=ch;
+      const x=c.getContext('2d');
+      x.translate(cw/2,ch/2); x.rotate(rad); x.drawImage(img,-w/2,-h/2);
+      cb(c.toDataURL('image/jpeg',0.72));
+    };
+    img.src=dataUrl;
+  }
+
+  function loadBaseImg(src,cb){
+    baseImg=new Image();
+    baseImg.onload=function(){
+      const maxW=Math.min(window.innerWidth*1.5,840);
+      const maxH=Math.round(window.innerHeight*0.5);
+      const k=Math.min(maxW/baseImg.width, maxH/baseImg.height, 1);
+      cv.width=Math.round(baseImg.width*k); cv.height=Math.round(baseImg.height*k);
+      redraw();
+      if(cb) cb();
+    };
+    baseImg.src=src;
+  }
+
+  function openEditor(shot){
+    rotation=0;
+    shotDraft=shot;
+    origSrc=shot.src;
+    marks=[]; cur=null; setMode('pen');
+    loadBaseImg(shot.src,function(){
+      $('sheet').style.display='flex';
+      $('eCap').value=shot.cap||'';
+    });
+  }
+
+  function paint(c,scale){
+    c.lineCap='round'; c.lineJoin='round';
+    marks.concat(cur?[cur]:[]).forEach(function(m){
+      if(m.type==='text'){
+        /* Placa clara detras: sobre una foto de obra el rojo solo se pierde
+           contra cielo, hormigon o sombra segun donde caiga la etiqueta.   */
+        const fs=txtH()*scale;
+        c.font='700 '+fs+'px Archivo, sans-serif';
+        c.textBaseline='top';
+        const pad=fs*0.28, w=c.measureText(m.txt).width;
+        c.fillStyle='rgba(255,255,255,.92)';
+        c.fillRect(m.x*scale-pad, m.y*scale-pad, w+pad*2, fs*1.2+pad*2);
+        c.fillStyle='#e11d1d';
+        c.fillText(m.txt, m.x*scale, m.y*scale);
+      }else{
+        if(m.pts.length<2) return;
+        c.strokeStyle='#e11d1d'; c.lineWidth=penW()*scale;
+        c.beginPath(); c.moveTo(m.pts[0].x*scale,m.pts[0].y*scale);
+        for(let i=1;i<m.pts.length;i++) c.lineTo(m.pts[i].x*scale,m.pts[i].y*scale);
+        c.stroke();
+      }
+    });
+  }
+
+  let redrawPending=false;
+  function redraw(){
+    if(redrawPending) return;
+    redrawPending=true;
+    requestAnimationFrame(function(){
+      ctx.clearRect(0,0,cv.width,cv.height);
+      ctx.drawImage(baseImg,0,0,cv.width,cv.height);
+      paint(ctx,1);
+      redrawPending=false;
+    });
+  }
+
+  function pt(e,el){ const r=el.getBoundingClientRect(); return {x:(e.clientX-r.left)*(el.width/r.width), y:(e.clientY-r.top)*(el.height/r.height)}; }
+
+  cv.addEventListener('pointerdown',function(e){
+    e.preventDefault();
+    const p=pt(e,cv);
+    /* El texto no se arrastra: se toca donde va y se escribe. prompt() bloquea
+       el hilo, asi que ni se captura el puntero ni se abre un trazo.        */
+    if(mode==='text'){
+      const t=(prompt('Label text')||'').trim();
+      if(t){ marks.push({type:'text',x:p.x,y:p.y,txt:t}); redraw(); }
+      return;
+    }
+    cv.setPointerCapture(e.pointerId);
+    cur={type:'pen',pts:[p]};
+  });
+  cv.addEventListener('pointermove',function(e){
+    if(!cur) return; e.preventDefault();
+    cur.pts.push(pt(e,cv)); redraw();
+  });
+  cv.addEventListener('pointerup',function(){
+    if(cur && cur.pts.length>1) marks.push(cur);
+    cur=null; redraw();
+  });
+  cv.addEventListener('pointercancel',function(){ cur=null; redraw(); });
+
+  function setMode(m){ mode=m; $('tDraw').classList.toggle('on',m==='pen'); $('tText').classList.toggle('on',m==='text'); }
+  $('tDraw').addEventListener('click',function(){ setMode('pen'); });
+  $('tText').addEventListener('click',function(){ setMode('text'); });
+  $('tUndo').addEventListener('click',function(){ marks.pop(); redraw(); });
+  $('tClear').addEventListener('click',function(){ marks=[]; redraw(); });
+
+  $('shCancel').addEventListener('click',function(){
+    $('sheet').style.display='none'; shotDraft=null; nextPending();
+  });
+
+  /* Rotate siempre parte de origSrc y aplica el angulo acumulado, no la
+     imagen ya girada, para que pulsar varias veces no sobre-rote. Los trazos
+     estaban atados a la orientacion anterior, asi que se limpian.          */
+  $('shRotate').addEventListener('click',function(){
+    if(!origSrc) return;
+    rotation=(rotation+90)%360;
+    const hadMarks=marks.length>0;
+    marks=[]; cur=null;
+    rotateImage(origSrc,rotation,function(rot){
+      shotDraft.src=rot;
+      loadBaseImg(rot);
+      if(hadMarks) flash('Rotated - marks were cleared, re-mark the photo');
+    });
+  });
+
+  $('shSave').addEventListener('click',function(){
+    const out=document.createElement('canvas');
+    out.width=baseImg.width; out.height=baseImg.height;
+    const o=out.getContext('2d');
+    o.drawImage(baseImg,0,0);
+    paint(o, baseImg.width/cv.width);
+    const shot={ id:uid(), src:out.toDataURL('image/jpeg',0.72),
+                 cap:$('eCap').value.trim(), ts:shotDraft.ts||Date.now() };
+    if(shotTarget==='act' && actDraft){
+      if(!actDraft.photos) actDraft.photos=[];
+      actDraft.photos.push(shot);
+      renderActThumbs();
+    }else{
+      state.pics.push(shot);
+      store.set(state); renderPics();
+    }
+    $('sheet').style.display='none'; shotDraft=null;
+    nextPending(); checkStorage();
+  });
+
+  /* ---------------- subcontratistas ---------------- */
+  function addSub(){
+    const v=$('subIn').value.trim();
+    if(!v) return;
+    if(state.subs.indexOf(v)<0) state.subs.push(v);
+    $('subIn').value='';
+    saveState(); renderSubs();
+  }
+  $('subAdd').addEventListener('click',addSub);
+  $('subIn').addEventListener('keydown',function(e){ if(e.key==='Enter'){ e.preventDefault(); addSub(); } });
+
+  function renderSubs(){
+    const box=$('subChips'); box.innerHTML='';
+    state.subs.forEach(function(s){
+      const c=document.createElement('span'); c.className='chip'; c.textContent=s;
+      /* Escape, no el caracter crudo: asi el archivo es ASCII puro y no
+         depende de que el servidor acierte con el charset.               */
+      const b=document.createElement('button'); b.textContent='\u00D7'; b.title='Remove';
+      b.onclick=function(){
+        state.subs=state.subs.filter(function(x){return x!==s});
+        saveState(); renderSubs();
+      };
+      c.appendChild(b); box.appendChild(c);
+    });
+    const dl=$('subList'); dl.innerHTML='';
+    state.subs.forEach(function(s){ const o=document.createElement('option'); o.value=s; dl.appendChild(o); });
+  }
+
+  /* ---------------- actividades ---------------- */
+  $('actAdd').addEventListener('click',function(){ openAct(null); });
+
+  function openAct(existing){
+    actDraft = existing
+      ? {id:existing.id, sub:existing.sub, txt:existing.txt, photos:(existing.photos||[]).slice()}
+      : {id:uid(), sub:'', txt:'', photos:[]};
+    $('acSub').value=actDraft.sub||'';
+    $('acTxt').value=actDraft.txt||'';
+    renderActThumbs();
+    $('actSheet').style.display='flex';
+  }
+
+  function renderActThumbs(){
+    const g=$('acThumbs'); g.innerHTML='';
+    (actDraft.photos||[]).forEach(function(p){
+      const f=document.createElement('figure');
+      const im=document.createElement('img'); im.src=p.src;
+      im.onclick=function(){
+        if(!confirm('Remove this photo from the activity?')) return;
+        actDraft.photos=actDraft.photos.filter(function(x){return x.id!==p.id});
+        renderActThumbs();
+      };
+      f.appendChild(im);
+      if(p.cap){ const c=document.createElement('figcaption'); c.textContent=p.cap; f.appendChild(c); }
+      g.appendChild(f);
+    });
+  }
+
+  $('acCancel').addEventListener('click',function(){ $('actSheet').style.display='none'; actDraft=null; });
+  $('acSave').addEventListener('click',function(){
+    const txt=$('acTxt').value.trim();
+    if(!txt){ $('acTxt').focus(); flash('Describe the activity before saving'); return; }
+    actDraft.sub=$('acSub').value.trim();
+    actDraft.txt=txt;
+    const i=state.acts.findIndex(function(x){return x.id===actDraft.id});
+    if(i>=0) state.acts[i]=actDraft; else state.acts.push(actDraft);
+    /* Un subcontratista nombrado en una actividad pertenece a la lista del
+       dia: se anade solo para no teclearlo dos veces.                     */
+    if(actDraft.sub && state.subs.indexOf(actDraft.sub)<0){ state.subs.push(actDraft.sub); renderSubs(); }
+    store.set(state);
+    $('actSheet').style.display='none'; actDraft=null;
+    render(); checkStorage();
+  });
+
+  /* ---------------- comentarios ---------------- */
+  $('cmtAdd').addEventListener('click',function(){ openCmt(null); });
+
+  function openCmt(existing){
+    cmtDraft = existing ? {id:existing.id, sub:existing.sub, txt:existing.txt} : {id:uid(), sub:'', txt:''};
+    $('cmSub').value=cmtDraft.sub||'';
+    $('cmTxt').value=cmtDraft.txt||'';
+    $('cmtSheet').style.display='flex';
+  }
+  $('cmCancel').addEventListener('click',function(){ $('cmtSheet').style.display='none'; cmtDraft=null; });
+  $('cmSave').addEventListener('click',function(){
+    const txt=$('cmTxt').value.trim();
+    if(!txt){ $('cmTxt').focus(); flash('Write the comment before saving'); return; }
+    cmtDraft.sub=$('cmSub').value.trim();
+    cmtDraft.txt=txt;
+    const i=state.cmts.findIndex(function(x){return x.id===cmtDraft.id});
+    if(i>=0) state.cmts[i]=cmtDraft; else state.cmts.push(cmtDraft);
+    store.set(state);
+    $('cmtSheet').style.display='none'; cmtDraft=null;
+    render();
+  });
+
+  /* ---------------- render ---------------- */
+  function entryRow(o,onEdit,onKill){
+    const d=document.createElement('div'); d.className='item';
+    if(o.sub){ const w=document.createElement('div'); w.className='who'; w.textContent=o.sub; d.appendChild(w); }
+    const t=document.createElement('div'); t.className='txt'; t.textContent=o.txt; d.appendChild(t);
+    if(o.photos && o.photos.length){
+      const th=document.createElement('div'); th.className='thumbs';
+      o.photos.forEach(function(p){ const im=document.createElement('img'); im.src=p.src; th.appendChild(im); });
+      d.appendChild(th);
+    }
+    const e=document.createElement('button'); e.className='edit'; e.textContent='Edit'; e.onclick=onEdit;
+    const k=document.createElement('button'); k.className='kill'; k.textContent='Remove'; k.onclick=onKill;
+    d.appendChild(e); d.appendChild(k);
+    return d;
+  }
+
+  function renderActs(){
+    const box=$('actList'); box.innerHTML='';
+    if(!state.acts.length){
+      box.innerHTML='<div class="empty">No activities logged yet.</div>';
+      return;
+    }
+    state.acts.forEach(function(a){
+      box.appendChild(entryRow(a,
+        function(){ openAct(a); },
+        function(){
+          if(!confirm('Remove this activity?')) return;
+          state.acts=state.acts.filter(function(x){return x.id!==a.id});
+          store.set(state); render();
+        }));
+    });
+  }
+
+  function renderCmts(){
+    const box=$('cmtList'); box.innerHTML='';
+    if(!state.cmts.length){
+      box.innerHTML='<div class="empty">No comments yet.</div>';
+      return;
+    }
+    state.cmts.forEach(function(c){
+      box.appendChild(entryRow(c,
+        function(){ openCmt(c); },
+        function(){
+          if(!confirm('Remove this comment?')) return;
+          state.cmts=state.cmts.filter(function(x){return x.id!==c.id});
+          store.set(state); render();
+        }));
+    });
+  }
+
+  function renderPics(){
+    const g=$('picGrid'); g.innerHTML='';
+    $('picEmpty').style.display=state.pics.length?'none':'';
+    state.pics.forEach(function(p){
+      const f=document.createElement('figure');
+      const im=document.createElement('img'); im.src=p.src;
+      im.onclick=function(){
+        if(!confirm('Remove this photo?')) return;
+        state.pics=state.pics.filter(function(x){return x.id!==p.id});
+        store.set(state); renderPics(); render();
+      };
+      f.appendChild(im);
+      if(p.cap){ const c=document.createElement('figcaption'); c.textContent=p.cap; f.appendChild(c); }
+      g.appendChild(f);
+    });
+  }
+
+  function render(){
+    $('tallyNum').textContent=state.acts.length+state.cmts.length;
+    $('mastTitle').textContent=state.proj||'Daily Log';
+    renderWx(); renderSubs(); renderActs(); renderCmts(); renderPics();
+  }
+
+  $('btnClear').addEventListener('click',function(){
+    const n=state.acts.length+state.cmts.length+state.pics.length;
+    if(!n) return;
+    if(!confirm('Clear this log? Export first if you need the PDF.')) return;
+    state.wx={photo:null,line:''};
+    state.subs=[]; state.acts=[]; state.cmts=[]; state.pics=[];
+    store.set(state); render();
+  });
+
+  /* ---------------- PDF ---------------- */
+  function renderReport(){
+    const jsPDF=window.jspdf.jsPDF;
+    const doc=new jsPDF({unit:'pt',format:'letter'});
+    const W=612, H=792, M=54;
+    const proj=state.proj||'Daily Log';
+    const INK=[32,33,28], MARK=hexRgb(BRAND.accent), MID=[111,113,105], HAIR=[214,213,208];
+    /* acento sobre papel blanco: mismo derivado x0.70 que --mark-deep en la UI */
+    const DEEP=MARK.map(function(c){ return Math.round(c*0.70); });
+    const FOOT=64;
+
+    function brandbar(full){
+      /* Cabecera clara igual que la masthead: papel blanco y filetes en vez de
+         barra oscura. La marca ya viene rasterizada con alfa, y el acento va
+         en su tono profundo porque el puro solo contrasta sobre oscuro.    */
+      const lh=17.5, lw=Math.min(Math.round(lh*logoAR*10)/10, 120), lx=M, ly=full?30:18;
+      if(logoPng){
+        try{ doc.addImage(logoPng,'PNG',lx,ly,lw,lh); }catch(e){}
+      }
+      doc.setFont('helvetica','bold'); doc.setFontSize(9.5);
+      doc.setTextColor(DEEP[0],DEEP[1],DEEP[2]);
+      doc.text(BRAND.wordmark, lx+lw+13, full?43.5:31.5, {charSpace:3.2});
+      doc.setDrawColor(HAIR[0],HAIR[1],HAIR[2]);
+      if(full){
+        doc.line(M,58,W-M,58);
+        doc.setFont('helvetica','bold'); doc.setFontSize(17); doc.setTextColor(INK[0],INK[1],INK[2]);
+        doc.text('Daily Log', M, 82);
+        doc.setFont('helvetica','normal'); doc.setFontSize(8.5); doc.setTextColor(DEEP[0],DEEP[1],DEEP[2]);
+        /* jsPDF calcula el ancho de align:'right' sin contar charSpace, asi que
+           el texto espaciado se salia del margen derecho. Se coloca a mano.  */
+        const dl='CONSTRUCTION DAILY LOG', dlCS=1.6;
+        doc.text(dl, W-M-(doc.getTextWidth(dl)+dl.length*dlCS), 82, {charSpace:dlCS});
+        doc.line(M,96,W-M,96);
+      }else{
+        doc.line(M,54,W-M,54);
+        doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(MID[0],MID[1],MID[2]);
+        /* Sin charSpace aqui, asi que align:'right' si mide bien. */
+        doc.text(proj+(state.date?'   /   '+longDate(state.date):''), W-M, 31.5, {align:'right'});
+      }
+    }
+
+    function metaBlock(y){
+      const cols=[['PROJECT',proj],['DATE',longDate(state.date)]];
+      const cw=(W-2*M)/2;
+      cols.forEach(function(c,i){
+        doc.setFont('helvetica','bold'); doc.setFontSize(6.8); doc.setTextColor(MID[0],MID[1],MID[2]);
+        doc.text(c[0], M+i*cw, y, {charSpace:1.1});
+        doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.setTextColor(INK[0],INK[1],INK[2]);
+        doc.text(doc.splitTextToSize(c[1]||'-', cw-10).slice(0,1), M+i*cw, y+13);
+      });
+      y+=26;
+      doc.setDrawColor(HAIR[0],HAIR[1],HAIR[2]); doc.line(M,y,W-M,y);
+      return y+18;
+    }
+
+    let y;
+    brandbar(true);
+    y=metaBlock(122);
+
+    function room(h){
+      if(y+h > H-FOOT){ doc.addPage(); brandbar(false); y=78; return true; }
+      return false;
+    }
+
+    /* Vineta dibujada, no tipografica: las fuentes estandar de jsPDF van en
+       CP1252 y el bullet U+2022 no tiene mapeo fiable. Un circulo relleno no
+       depende de la codificacion.                                          */
+    function bullet(yy){
+      doc.setFillColor(35,36,31);
+      doc.circle(M+3, yy+6, 1.6, 'F');
+    }
+
+    /* Banda de acento con texto oscuro, igual que .secband en la app. */
+    function band(label){
+      room(30);
+      doc.setFillColor(MARK[0],MARK[1],MARK[2]); doc.rect(M,y,W-2*M,16,'F');
+      doc.setFont('helvetica','bold'); doc.setFontSize(7); doc.setTextColor(INK[0],INK[1],INK[2]);
+      doc.text(label.toUpperCase(), M+8, y+11, {charSpace:1.8});
+      y+=25;
+    }
+
+    /* --- Weather --- */
+    band('Weather');
+    if(state.wx.line){
+      doc.setFont('helvetica','normal'); doc.setFontSize(9.5); doc.setTextColor(35,36,31);
+      const wl=doc.splitTextToSize(state.wx.line, W-2*M);
+      doc.text(wl, M, y+9, {lineHeightFactor:1.21});
+      y+=wl.length*11.5+6;
+    }
+    if(state.wx.photo){
+      let pr; try{ pr=doc.getImageProperties(state.wx.photo); }catch(e){ pr={width:3,height:4}; }
+      /* La captura del tiempo es un movil en vertical: se limita por alto. */
+      const kk=Math.min(110/pr.width, 150/pr.height);
+      const pw=pr.width*kk, phh=pr.height*kk;
+      room(phh+10);
+      try{ doc.addImage(state.wx.photo,'JPEG',M,y,pw,phh); }catch(e){}
+      y+=phh+12;
+    }
+    if(!state.wx.line && !state.wx.photo){
+      doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(MID[0],MID[1],MID[2]);
+      doc.text('Not recorded.', M, y+9); y+=18;
+    }
+
+    /* --- Subcontractors --- */
+    band('Subcontractors');
+    if(state.subs.length){
+      doc.setFont('helvetica','normal'); doc.setFontSize(9.5); doc.setTextColor(35,36,31);
+      state.subs.forEach(function(s){
+        room(14);
+        bullet(y);
+        doc.setTextColor(35,36,31);
+        doc.text(s, M+14, y+9);
+        y+=13;
+      });
+      y+=6;
+    }else{
+      doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(MID[0],MID[1],MID[2]);
+      doc.text('None recorded.', M, y+9); y+=18;
+    }
+
+    /* --- Activities --- */
+    band('Activities');
+    if(state.acts.length){
+      state.acts.forEach(function(a){
+        doc.setFont('helvetica','normal'); doc.setFontSize(9.5);
+        const lines=doc.splitTextToSize(a.txt||'', W-2*M-14);
+        room((a.sub?13:0)+lines.length*11.5+12);
+        if(a.sub){
+          doc.setFont('helvetica','bold'); doc.setFontSize(7.5); doc.setTextColor(DEEP[0],DEEP[1],DEEP[2]);
+          doc.text(a.sub.toUpperCase(), M+14, y+8, {charSpace:1.2});
+          y+=13;
+        }
+        bullet(y);
+        doc.setFont('helvetica','normal'); doc.setFontSize(9.5); doc.setTextColor(35,36,31);
+        doc.text(lines, M+14, y+9, {lineHeightFactor:1.21});
+        y+=lines.length*11.5+4;
+
+        /* Las fotos de una actividad van pegadas a ella, no al final: en los
+           logs reales la foto es la prueba de lo que describe la linea.   */
+        const ph=(a.photos||[]);
+        if(ph.length){
+          const TW=(W-2*M-14-12)/3, TH=TW*0.72;
+          let col=0;
+          room(TH+10);
+          let rowTop=y+4;
+          ph.forEach(function(p){
+            if(col===3){ col=0; y=rowTop+TH+6; room(TH+10); rowTop=y+4; }
+            const px=M+14+col*(TW+6);
+            try{ doc.addImage(p.src,'JPEG',px,rowTop,TW,TH); }catch(e){}
+            col++;
+          });
+          y=rowTop+TH+10;
+        }
+        y+=4;
+      });
+    }else{
+      doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(MID[0],MID[1],MID[2]);
+      doc.text('None recorded.', M, y+9); y+=18;
+    }
+
+    /* --- Comments --- */
+    band('Comments');
+    if(state.cmts.length){
+      state.cmts.forEach(function(c){
+        doc.setFont('helvetica','normal'); doc.setFontSize(9.5);
+        const lines=doc.splitTextToSize(c.txt||'', W-2*M-14);
+        room((c.sub?13:0)+lines.length*11.5+10);
+        if(c.sub){
+          doc.setFont('helvetica','bold'); doc.setFontSize(7.5); doc.setTextColor(DEEP[0],DEEP[1],DEEP[2]);
+          doc.text(c.sub.toUpperCase(), M+14, y+8, {charSpace:1.2});
+          y+=13;
+        }
+        bullet(y);
+        doc.setFont('helvetica','normal'); doc.setFontSize(9.5); doc.setTextColor(35,36,31);
+        doc.text(lines, M+14, y+9, {lineHeightFactor:1.21});
+        y+=lines.length*11.5+8;
+      });
+    }else{
+      doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(MID[0],MID[1],MID[2]);
+      doc.text('None recorded.', M, y+9); y+=18;
+    }
+
+    /* --- Pics: rejilla 2 columnas --- */
+    if(state.pics.length){
+      band('Pics');
+      const GW=(W-2*M-12)/2, GH=GW*0.75;
+      let col=0, rowTop=y;
+      state.pics.forEach(function(p){
+        if(col===2){ col=0; rowTop=rowTop+GH+(22); }
+        if(rowTop+GH+22 > H-FOOT){
+          doc.addPage(); brandbar(false); rowTop=78; col=0;
+        }
+        const px=M+col*(GW+12);
+        try{ doc.addImage(p.src,'JPEG',px,rowTop,GW,GH); }catch(e){}
+        if(p.cap){
+          doc.setFont('helvetica','normal'); doc.setFontSize(7); doc.setTextColor(MID[0],MID[1],MID[2]);
+          doc.text(doc.splitTextToSize(p.cap, GW).slice(0,2), px, rowTop+GH+9);
+        }
+        col++;
+      });
+      y=rowTop+GH+24;
+    }
+
+    /* --- pie --- */
+    const tot=doc.getNumberOfPages();
+    for(let p=1;p<=tot;p++){
+      doc.setPage(p);
+      doc.setDrawColor(HAIR[0],HAIR[1],HAIR[2]); doc.line(M,H-50,W-M,H-50);
+      doc.setFont('helvetica','normal'); doc.setFontSize(6.5); doc.setTextColor(152,154,146);
+      doc.text(BRAND.disclaimer[0],M,H-38);
+      doc.text(BRAND.disclaimer[1],M,H-29);
+      doc.text('Page '+p+' of '+tot,W-M,H-29,{align:'right'});
+    }
+
+    return doc;
+  }
+
+  function getFilename(){
+    const proj=(state.proj||'DailyLog').replace(/[^a-z0-9]/gi,'_');
+    const date=state.date||todayLocal();
+    return proj+'_DailyLog_'+date+'.pdf';
+  }
+
+  function hasContent(){
+    return !!(state.acts.length || state.cmts.length || state.pics.length ||
+              state.subs.length || state.wx.photo || state.wx.line);
+  }
+
+  $('btnPdf').addEventListener('click',function(){
+    if(!window.jspdf){ flash('PDF library missing - check jspdf.umd.min.js is in the repo'); return; }
+    if(!hasContent()){ flash('Nothing to export yet'); return; }
+    flash('Building PDF...');
+    setTimeout(function(){
+      const doc=renderReport();
+      doc.save(getFilename());
+      flash('PDF exported');
+    },60);
+  });
+
+  $('btnShare').addEventListener('click',function(){
+    if(!window.jspdf){ flash('PDF library missing - check jspdf.umd.min.js is in the repo'); return; }
+    if(!hasContent()){ flash('Nothing to share yet'); return; }
+    flash('Building PDF for sharing...');
+    setTimeout(function(){
+      const doc=renderReport();
+      const blob=doc.output('blob');
+      const filename=getFilename();
+      /* canShare con el archivo real: en escritorio navigator.share suele
+         existir pero rechaza archivos, y sin esto se pierde la descarga.  */
+      const file=new File([blob],filename,{type:'application/pdf'});
+      if(navigator.share && navigator.canShare && navigator.canShare({files:[file]})){
+        navigator.share({title:filename, files:[file]})
+          .then(function(){ flash('PDF shared'); })
+          .catch(function(err){ if(err.name!=='AbortError') flash('Share cancelled or failed'); });
+      }else{
+        const a=document.createElement('a');
+        a.href=URL.createObjectURL(blob);
+        a.download=filename;
+        a.click();
+        setTimeout(function(){ URL.revokeObjectURL(a.href); },10000);
+        flash('PDF downloaded (share not supported)');
+      }
+    },60);
+  });
+
+})();
+</script>
