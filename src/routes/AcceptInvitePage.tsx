@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react';
-import { Link, Navigate, useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { AuthLayout } from '@/components/AuthLayout';
 import { useAuth } from '@/auth/authContext';
 import { getSupabase } from '@/lib/supabase';
@@ -63,10 +63,15 @@ export function AcceptInvitePage() {
     navigate('/', { replace: true });
   }
 
-  // Quien ya tiene contraseña y entra aquí de vuelta no tiene nada que hacer.
-  if (profile?.accepted_at && !busy && !password && !confirmation) {
-    return <Navigate to="/" replace />;
-  }
+  // Aquí había una redirección para quien ya tenía `accepted_at`. Rompía la
+  // recuperación de contraseña entera: ese campo se rellena al aceptar la
+  // invitación, o sea que lo tiene TODO el que lleva tiempo usando la app —
+  // justo quien pide un enlace de recuperación. El resultado era que el
+  // enlace del correo te metía en la app sin dejarte cambiar nada.
+  //
+  // Llegar aquí con sesión significa que se acaba de canjear un enlace de un
+  // solo uso, o que alguien ya dentro quiere cambiar su contraseña. En los
+  // dos casos lo correcto es enseñar el formulario.
 
   return (
     <AuthLayout title="Elige tu contraseña" subtitle={profile?.email ?? undefined}>
