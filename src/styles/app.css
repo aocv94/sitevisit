@@ -60,9 +60,20 @@
   display: flex;
   align-items: center;
   gap: 14px;
+  /* flex:none — sin esto la fila se encoge por aqui y el desplegable, que
+     se ancla a la derecha del engrane, acaba saliendose de la pantalla. */
+  flex: none;
 }
-.mastlinks a,
-.mastlinks button {
+
+/* En un telefono estrecho el rotulo "Constellation" se come 154px de 375 y
+   empuja las salidas fuera de la cabecera. La marca sola basta: el titulo
+   del proyecto va justo debajo. */
+@media (max-width: 430px) {
+  .mast .wm {
+    display: none;
+  }
+}
+.mastlinks > a {
   font-family: 'Archivo', sans-serif;
   font-size: 10px;
   letter-spacing: 0.12em;
@@ -70,13 +81,8 @@
   font-weight: 600;
   color: #8d99a2;
   text-decoration: none;
-  background: none;
-  border: 0;
-  padding: 0;
-  cursor: pointer;
 }
-.mastlinks a:active,
-.mastlinks button:active {
+.mastlinks > a:active {
   color: var(--mark);
 }
 .mast .btm {

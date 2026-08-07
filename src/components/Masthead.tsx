@@ -2,11 +2,12 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '@/auth/authContext';
 import { BUILD } from '@/config/project';
 import { useReport } from '@/state/reportContext';
+import { AccountMenu } from './AccountMenu';
 import { ConstellationMark } from './ConstellationMark';
 
 export function Masthead() {
   const { state } = useReport();
-  const { isAppOwner, leaderOrgs, signOut } = useAuth();
+  const { isAppOwner, leaderOrgs } = useAuth();
   const canAdminister = isAppOwner || leaderOrgs.length > 0;
 
   return (
@@ -15,13 +16,11 @@ export function Masthead() {
         <ConstellationMark />
         <span className="wm">Constellation</span>
         {/* Sin esto la captura es un callejón sin salida: ocupa la pantalla
-            entera y no deja volver ni cerrar sesión. */}
+            entera y no deja volver. La vuelta se queda a la vista; lo de la
+            cuenta va dentro del engrane. */}
         <span className="mastlinks">
           {canAdminister && <Link to="/empresa">Administración</Link>}
-          <Link to="/cambiar-contrasena">Contraseña</Link>
-          <button type="button" onClick={() => void signOut()}>
-            Salir
-          </button>
+          <AccountMenu />
         </span>
       </div>
       <div className="btm">

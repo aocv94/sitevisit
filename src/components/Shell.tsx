@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '@/auth/authContext';
+import { AccountMenu } from './AccountMenu';
 import { ConstellationMark } from './ConstellationMark';
 
 interface Props {
@@ -11,7 +12,7 @@ interface Props {
 
 /** Marco de los paneles de administracion. La captura tiene el suyo propio. */
 export function Shell({ title, actions, children }: Props) {
-  const { profile, isAppOwner, leaderOrgs, memberships, signOut } = useAuth();
+  const { isAppOwner, leaderOrgs, memberships } = useAuth();
 
   return (
     <div className="adm">
@@ -26,11 +27,7 @@ export function Shell({ title, actions, children }: Props) {
           {memberships.length > 0 && <NavLink to="/captura">Captura</NavLink>}
         </nav>
         <div className="adm-top-user">
-          <span className="adm-muted">{profile?.email}</span>
-          <NavLink to="/cambiar-contrasena">Contraseña</NavLink>
-          <button className="adm-linklike" type="button" onClick={() => void signOut()}>
-            Salir
-          </button>
+          <AccountMenu />
         </div>
       </header>
 
