@@ -3,8 +3,16 @@ import type { Project } from '@/types/db';
 
 const COLUMNS = 'id, org_id, name, zones, created_at';
 
+interface AccessibleRow extends Project {
+  org: { name: string } | { name: string }[] | null;
+}
+
 /**
- * Proyectos en los que quien pregunta puede trabajar, de todas sus empresas.
+ * Proyectos en los que quien pregunta puede trabajar, de todas sus empresas,
+ * con el nombre de la empresa resuelto.
+ *
+ * La empresa hace falta para el selector: un dueño de la plataforma puede ver
+ * obras de varias, y "CORA Merrick Park" a secas no dice de quien es.
  *
  * No lleva filtro por usuario a proposito: la policy `project_read` ya
  * devuelve los de un lider y solo los asignados a un colaborador. Filtrar
@@ -13,10 +21,21 @@ const COLUMNS = 'id, org_id, name, zones, created_at';
 export async function listAccessibleProjects(): Promise<Project[]> {
   const { data, error } = await getSupabase()
     .from('projects')
-    .select(COLUMNS)
+    .select(`${COLUMNS}, org:orgs(name)`)
     .order('name', { ascending: true });
   if (error) throw new Error(error.message);
-  return (data ?? []) as Project[];
+
+  return ((data ?? []) as unknown as AccessibleRow[]).map((row) => {
+    const org = Array.isArray(row.org) ? row.org[0] : row.org;
+    return {
+      id: row.id,
+      org_id: row.org_id,
+      name: row.name,
+      zones: row.zones,
+      created_at: row.created_at,
+      org_name: org?.name ?? null,
+    };
+  });
 }
 
 export async function listProjects(orgId: string): Promise<Project[]> {

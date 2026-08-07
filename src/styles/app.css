@@ -52,6 +52,33 @@
   font-weight: 600;
   color: var(--mark);
 }
+
+/* Salidas de la pantalla de captura. Discretas para no competir con la
+   captura en si, pero siempre visibles: es la unica via de vuelta. */
+.mastlinks {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.mastlinks a,
+.mastlinks button {
+  font-family: 'Archivo', sans-serif;
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  font-weight: 600;
+  color: #8d99a2;
+  text-decoration: none;
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+}
+.mastlinks a:active,
+.mastlinks button:active {
+  color: var(--mark);
+}
 .mast .btm {
   display: flex;
   align-items: flex-end;

@@ -6,15 +6,23 @@ import { getSupabase } from '@/lib/supabase';
 
 const MIN_PASSWORD = 8;
 
+interface Props {
+  /**
+   * `link` — se llegó desde el correo (invitación o recuperación).
+   * `change` — alguien ya dentro quiere cambiar su contraseña.
+   */
+  mode?: 'link' | 'change';
+}
+
 /**
- * Destino de los enlaces de correo: invitación y recuperación de contraseña.
+ * Fijar contraseña. Cubre los tres casos: aceptar una invitación, recuperar
+ * la contraseña, y cambiarla desde dentro.
  *
- * El enlace trae un token que `detectSessionInUrl` del cliente canjea por una
- * sesión antes de que se pinte nada. Por eso aquí ya hay sesión: lo único que
- * falta es fijar la contraseña.
+ * Los dos primeros llegan con la sesión ya creada: `detectSessionInUrl` del
+ * cliente canjea el token del enlace antes de que se pinte nada.
  */
-export function AcceptInvitePage() {
-  const { status, profile, reload } = useAuth();
+export function AcceptInvitePage({ mode = 'link' }: Props) {
+  const { status, profile, reload, passwordRecovery, clearPasswordRecovery } = useAuth();
   const navigate = useNavigate();
   const [password, setPassword] = useState('');
   const [confirmation, setConfirmation] = useState('');
@@ -57,27 +65,24 @@ export function AcceptInvitePage() {
       setBusy(false);
       return;
     }
-    // El trigger de auth.users ya habrá marcado accepted_at; se recarga para
-    // que la app vea la empresa a la que le acaban de dar acceso.
+    // Se limpia la bandera ANTES de navegar: si no, la app volvería a
+    // interceptar cualquier ruta para pedir la contraseña otra vez.
+    clearPasswordRecovery();
     await reload();
     navigate('/', { replace: true });
   }
 
-  // Aquí había una redirección para quien ya tenía `accepted_at`. Rompía la
-  // recuperación de contraseña entera: ese campo se rellena al aceptar la
-  // invitación, o sea que lo tiene TODO el que lleva tiempo usando la app —
-  // justo quien pide un enlace de recuperación. El resultado era que el
-  // enlace del correo te metía en la app sin dejarte cambiar nada.
-  //
-  // Llegar aquí con sesión significa que se acaba de canjear un enlace de un
-  // solo uso, o que alguien ya dentro quiere cambiar su contraseña. En los
-  // dos casos lo correcto es enseñar el formulario.
+  const isRecovery = passwordRecovery || mode === 'link';
 
   return (
-    <AuthLayout title="Elige tu contraseña" subtitle={profile?.email ?? undefined}>
+    <AuthLayout
+      title={isRecovery ? 'Elige tu contraseña' : 'Cambiar contraseña'}
+      subtitle={profile?.email ?? undefined}
+      footer={mode === 'change' ? <Link to="/">Cancelar</Link> : undefined}
+    >
       <form className="adm-form" onSubmit={handleSubmit}>
         <label className="adm-field">
-          <span>Contraseña</span>
+          <span>{mode === 'change' ? 'Contraseña nueva' : 'Contraseña'}</span>
           <input
             type="password"
             value={password}

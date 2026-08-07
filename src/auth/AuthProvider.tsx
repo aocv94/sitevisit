@@ -21,6 +21,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [memberships, setMemberships] = useState<MembershipWithOrg[]>([]);
   const [profileLoaded, setProfileLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [passwordRecovery, setPasswordRecovery] = useState(false);
 
   const userId = session?.user.id ?? null;
 
@@ -39,7 +40,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+    } = supabase.auth.onAuthStateChange((event, nextSession) => {
+      // Este evento es la única señal fiable de que la sesión viene de un
+      // enlace de recuperación: la URL de aterrizaje no lo es.
+      if (event === 'PASSWORD_RECOVERY') setPasswordRecovery(true);
       setSession(nextSession);
       setSessionResolved(true);
     });
@@ -100,7 +104,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (userId) await loadProfile(userId);
   }, [userId, loadProfile]);
 
+  const clearPasswordRecovery = useCallback(() => setPasswordRecovery(false), []);
+
   const signOut = useCallback(async () => {
+    setPasswordRecovery(false);
     await getSupabase().auth.signOut();
   }, []);
 
@@ -118,10 +125,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       isAppOwner: profile?.is_app_owner === true,
       leaderOrgs: memberships.filter((m) => isLeaderRole(m.role)),
       error,
+      passwordRecovery,
+      clearPasswordRecovery,
       reload,
       signOut,
     };
-  }, [sessionResolved, session, profile, memberships, profileLoaded, error, reload, signOut]);
+  }, [
+    sessionResolved,
+    session,
+    profile,
+    memberships,
+    profileLoaded,
+    error,
+    passwordRecovery,
+    clearPasswordRecovery,
+    reload,
+    signOut,
+  ]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

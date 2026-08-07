@@ -33,6 +33,20 @@ function Landing() {
 }
 
 export function AppRoutes() {
+  const { status, passwordRecovery } = useAuth();
+
+  /**
+   * Una recuperación en curso se atiende ANTES que cualquier ruta.
+   *
+   * Supabase no siempre aterriza donde se le pide: si la URL de vuelta no
+   * está en su lista de Redirect URLs, cae al Site URL sin avisar. Entonces
+   * la persona entraba en la app con sesión, sin haber elegido contraseña y
+   * sin que nada se lo pidiera — que es justo lo que pasaba.
+   */
+  if (status === 'signed-in' && passwordRecovery) {
+    return <AcceptInvitePage />;
+  }
+
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
@@ -45,6 +59,14 @@ export function AppRoutes() {
         element={
           <RequireAuth>
             <NoOrgPage />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/cambiar-contrasena"
+        element={
+          <RequireAuth>
+            <AcceptInvitePage mode="change" />
           </RequireAuth>
         }
       />

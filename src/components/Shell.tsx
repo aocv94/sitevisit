@@ -27,6 +27,7 @@ export function Shell({ title, actions, children }: Props) {
         </nav>
         <div className="adm-top-user">
           <span className="adm-muted">{profile?.email}</span>
+          <NavLink to="/cambiar-contrasena">Contraseña</NavLink>
           <button className="adm-linklike" type="button" onClick={() => void signOut()}>
             Salir
           </button>

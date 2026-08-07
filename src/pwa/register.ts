@@ -8,6 +8,10 @@
  */
 export function registerServiceWorker(): void {
   if (!('serviceWorker' in navigator)) return;
+  // En desarrollo no se genera sw.js, asi que Vite devuelve el index.html y
+  // el navegador escupe un error de MIME type en cada carga. Ruido que
+  // acaba tapando errores de verdad.
+  if (!import.meta.env.PROD) return;
 
   window.addEventListener('load', () => {
     navigator.serviceWorker

@@ -15,6 +15,17 @@ export interface AuthState {
   leaderOrgs: MembershipWithOrg[];
   /** Error de carga del perfil, para poder distinguirlo de "no tiene empresa". */
   error: string | null;
+  /**
+   * Hay una recuperación de contraseña en curso: el enlace del correo acaba
+   * de canjearse por una sesión.
+   *
+   * Se sigue a nivel global y no por ruta porque Supabase no siempre aterriza
+   * donde se le pide: si la URL de vuelta no está en su lista de Redirect
+   * URLs, cae al Site URL sin avisar. Entonces la persona entra en la app
+   * con sesión, sin haber elegido contraseña y sin que nada se lo pida.
+   */
+  passwordRecovery: boolean;
+  clearPasswordRecovery(): void;
   reload(): Promise<void>;
   signOut(): Promise<void>;
 }

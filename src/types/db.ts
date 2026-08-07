@@ -49,6 +49,12 @@ export interface Project {
   name: string;
   zones: string[];
   created_at: string;
+  /**
+   * Solo lo rellena listAccessibleProjects. Hace falta cuando se listan obras
+   * de varias empresas a la vez y el nombre del proyecto no basta para saber
+   * de quién es.
+   */
+  org_name?: string | null;
 }
 
 /**

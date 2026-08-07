@@ -3,6 +3,7 @@ import { Link, Navigate, useLocation } from 'react-router-dom';
 import type { AuthError } from '@supabase/supabase-js';
 import { AuthLayout } from '@/components/AuthLayout';
 import { useAuth } from '@/auth/authContext';
+import { useAuthSettings } from '@/hooks/useAuthSettings';
 import { getSupabase } from '@/lib/supabase';
 
 /**
@@ -33,6 +34,7 @@ function describeSignInError(error: AuthError): string {
 
 export function LoginPage() {
   const { status } = useAuth();
+  const settings = useAuthSettings();
   const location = useLocation();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -67,7 +69,10 @@ export function LoginPage() {
       footer={
         <>
           <Link to="/recuperar">He olvidado mi contraseña</Link>
-          <Link to="/registro">Crear cuenta</Link>
+          {/* Solo se ofrece si la instancia lo permite. Cuando el acceso es
+              únicamente por invitación, este enlace llevaría a un formulario
+              que siempre falla. */}
+          {settings?.signupEnabled && <Link to="/registro">Crear cuenta</Link>}
         </>
       }
     >

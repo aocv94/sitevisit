@@ -15,6 +15,17 @@ interface Props {
 export function ReportHeaderForm({ projects, activeProjectId, onSelectProject }: Props) {
   const { state, updateHeader } = useReport();
 
+  // Con obras de varias empresas, el nombre del proyecto no basta para saber
+  // de quién es. Se agrupan por empresa; con una sola, la lista va plana.
+  const byOrg = new Map<string, Project[]>();
+  for (const project of projects) {
+    const key = project.org_name ?? '';
+    const list = byOrg.get(key);
+    if (list) list.push(project);
+    else byOrg.set(key, [project]);
+  }
+  const grouped = byOrg.size > 1;
+
   return (
     <div className="hdr">
       <div>
@@ -26,11 +37,21 @@ export function ReportHeaderForm({ projects, activeProjectId, onSelectProject }:
           value={activeProjectId}
           onChange={(e) => onSelectProject(e.target.value)}
         >
-          {projects.map((project) => (
-            <option key={project.id} value={project.id}>
-              {project.name}
-            </option>
-          ))}
+          {grouped
+            ? [...byOrg.entries()].map(([orgName, list]) => (
+                <optgroup key={orgName} label={orgName || 'Sin empresa'}>
+                  {list.map((project) => (
+                    <option key={project.id} value={project.id}>
+                      {project.name}
+                    </option>
+                  ))}
+                </optgroup>
+              ))
+            : projects.map((project) => (
+                <option key={project.id} value={project.id}>
+                  {project.name}
+                </option>
+              ))}
         </select>
       </div>
       <div>

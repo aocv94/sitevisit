@@ -275,6 +275,13 @@ code {
   color: #8d99a2;
   margin: 0;
 }
+.adm-top-user a {
+  color: #b8c4cb;
+  text-decoration: none;
+}
+.adm-top-user a:hover {
+  color: var(--mark);
+}
 
 /* --------------------------------------------------------------- cuerpo */
 .adm-main {
